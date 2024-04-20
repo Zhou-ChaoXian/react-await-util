@@ -1,0 +1,8 @@
+.idea
+.git
+node_modules
+package-lock.json
+dist
+tests
+rollup.config.mjs
+*.tgz

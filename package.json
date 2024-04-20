@@ -1,0 +1,38 @@
+{
+  "name": "react-await-component",
+  "version": "1.0.0",
+  "description": "react 异步组件",
+  "main": "./src/await.js",
+  "module": "./src/await.js",
+  "types": "./src/await.d.ts",
+  "scripts": {
+    "start": "rollup -c"
+  },
+  "devDependencies": {
+    "react": "^18.2.0",
+    "react-dom": "^18.2.0",
+    "@rollup/plugin-commonjs": "^25.0.7",
+    "@rollup/plugin-node-resolve": "^15.2.3",
+    "@rollup/plugin-terser": "^0.4.4",
+    "rollup": "^4.7.0"
+  },
+  "peerDependencies": {
+    "react": "^18.2.0",
+    "react-dom": "^18.2.0"
+  },
+  "keywords": [
+    "react",
+    "Await",
+    "Async",
+    "react-await-component"
+  ],
+  "author": {
+    "name": "Zhou-ChaoXian",
+    "email": "2542606900@qq.com"
+  },
+  "repository": {
+    "type": "git",
+    "url": ""
+  },
+  "license": "MIT"
+}
