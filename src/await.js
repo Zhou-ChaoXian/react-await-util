@@ -31,9 +31,8 @@ export {
 const _data = Symbol(), _error = Symbol(), _tracked = Symbol();
 const nop = Symbol(), noRender = Symbol();
 const orders = new Set(["forwards", "backwards", "together"]);
-const viewContext = createContext(null);
+const asyncViewContext = createContext(defaultGenerateResolve);
 const asyncContext = createContext(null);
-const defaultInit = () => undefined;
 
 /**
  * @typedef {"pending" | "resolve" | "reject"} Status
@@ -176,12 +175,19 @@ function AwaitList({order, tail, gap = 300, children}) {
  * @param [onIntersection] {(entry: IntersectionObserverEntry) => boolean}
  */
 function AwaitView({root, rootIsParent, rootMargin, threshold, children, onIntersection = defaultIntersection}) {
-  const {placeholder, flag} = useView(root, rootIsParent, rootMargin, threshold, onIntersection);
-  const resolve = useState(__async)[0];
-  if (isValidElement(children) && children.type === Await) {
-    return flag.current ?
-      children :
-      createElement(Await, {resolve, init: children.props.init, placeholder}, children.props.children);
+  const valid =
+    isValidElement(children) &&
+    children.type === Await &&
+    children.props.resolve instanceof Promise;
+  const [[resolve, handle]] = useState(() => {
+    const {promise, resolve} = withResolvers();
+    return [promise, () => {
+      valid && resolve(trackedPromise(children.props.resolve));
+    }];
+  });
+  const {placeholder, flag} = useView(handle, root, rootIsParent, rootMargin, threshold, onIntersection);
+  if (valid) {
+    return flag.current ? children : cloneElement(children, {resolve, placeholder});
   }
 }
 
@@ -194,17 +200,18 @@ function AwaitView({root, rootIsParent, rootMargin, threshold, children, onInter
  */
 
 /**
- * @template P
+ * @template P, U
  * @typedef {{
  *   element: React.ReactElement;
  *   init?: React.ReactElement;
- *   children: (asyncResolveData: {first?: boolean; status?: Status; element: React.ReactElement; error?: any; placeholder?: React.RefObject<any>; watchOptions?: WatchOptions;}) => React.ReactElement;
+ *   children: (asyncResolveData: {first?: boolean; status?: Status; element: React.ReactElement; error?: any; placeholder?: React.RefObject<any>; watchOptions?: WatchOptions; useValue?: U;}) => React.ReactElement;
  *   compare?: (newProps: P, oldProps: P) => boolean;
  *   delay?: number;
  *   onStart?: (first: boolean) => void;
  *   onEnd?: (first: boolean) => void;
  *   onError?: (error: any) => void;
  *   placeholder?: React.RefObject<any>;
+ *   use?: (watchOptions: WatchOptions) => U;
  * }} AsyncProps
  */
 
@@ -222,7 +229,8 @@ const Async = forwardRef(function Async(
     onStart,
     onEnd,
     onError,
-    placeholder
+    placeholder,
+    use,
   },
   ref
 ) {
@@ -230,8 +238,9 @@ const Async = forwardRef(function Async(
   const cacheProps = useRef(null);
   const first = useRef(true);
   const el = useRef(null);
-  const resolve = useViewContextValue();
+  const generateResolve = useContext(asyncViewContext);
   const [watchOptions, forceUpdateFlag, isWatching] = useWatchOptions(first);
+  const useValue = use?.(watchOptions);
   useImperativeHandle(ref, () => watchOptions, []);
   if (!(isValidElement(element) && typeof element.type === "function")) return;
   if (first.current) {
@@ -249,7 +258,7 @@ const Async = forwardRef(function Async(
     }
   }
   return el.current = createElement(Await, {
-    resolve: resolve || element.type(element.props),
+    resolve: generateResolve(element, watchOptions, useValue),
     init,
     delay,
     onStart,
@@ -257,7 +266,7 @@ const Async = forwardRef(function Async(
     onError,
     placeholder,
   }, ({first, status, value, error, placeholder}) => {
-    return children({first, status, element: value, error, placeholder, watchOptions});
+    return children({first, status, element: value, error, placeholder, watchOptions, useValue});
   });
 });
 
@@ -270,31 +279,40 @@ const Async = forwardRef(function Async(
  * @param [onIntersection] {(entry: IntersectionObserverEntry) => boolean}
  */
 function AsyncView({root, rootIsParent, rootMargin, threshold, children, onIntersection = defaultIntersection}) {
-  const {placeholder, flag} = useView(root, rootIsParent, rootMargin, threshold, onIntersection);
-  const resolve = useState(() => {
-    if (
-      isValidElement(children) &&
-      children.type === Async &&
-      isValidElement(children.props.element) &&
-      typeof children.props.element.type === "function"
-    ) {
-      const element = children.props.element;
-      return {current: element.type(element.props)};
+  const valid =
+    isValidElement(children) &&
+    children.type === Async &&
+    isValidElement(children.props.element) &&
+    typeof children.props.element.type === "function";
+  const [[generateResolve, handle]] = useState(() => {
+    const {promise, resolve} = withResolvers();
+    let realResolve;
+    return [
+      (element, watchOptions, useValue) => {
+        realResolve = defaultGenerateResolve(element, watchOptions, useValue);
+        return flag.current ? realResolve : promise;
+      },
+      () => {
+        valid && resolve(trackedPromise(realResolve));
+      }
+    ];
+  });
+  const {placeholder, flag} = useView(handle, root, rootIsParent, rootMargin, threshold, onIntersection);
+  if (valid) {
+    let value, childrenEl;
+    if (flag.current) {
+      value = defaultGenerateResolve;
+      childrenEl = children;
     } else {
-      return {current: null};
+      value = generateResolve;
+      childrenEl = cloneElement(children, {placeholder});
     }
-  })[0];
-  const element = useState(() => createElement(__async))[0];
-  if (isValidElement(children) && children.type === Async) {
-    return flag.current ?
-      createElement(viewContext.Provider, {value: resolve.current}, children) :
-      createElement(Async, {element, init: children.props.init, placeholder}, children.props.children);
+    return createElement(asyncViewContext.Provider, {value}, childrenEl);
   }
 }
 
 /**
- * @template T
- * @template P
+ * @template T, P, U
  * @param [name] {string}
  * @param [init] {(props: P) => T}
  * @param [compare] {(newProps: P, oldProps: P) => boolean}
@@ -302,8 +320,9 @@ function AsyncView({root, rootIsParent, rootMargin, threshold, children, onInter
  * @param [onStart] {(first: boolean) => void}
  * @param [onEnd] {(first: boolean) => void}
  * @param [onError] {(error: any) => void}
- * @param loader {(props: P) => Promise<T>}
+ * @param loader {(props: P, watchOptions: WatchOptions, useValue: U) => Promise<T>}
  * @param Component {(props: P) => React.ReactElement}
+ * @param [use] {(props: P, watchOptions: WatchOptions) => U}
  * @return {React.ForwardRefExoticComponent<React.PropsWithoutRef<P> & React.RefAttributes<WatchOptions>>}
  */
 function defineAsyncComponent(
@@ -316,7 +335,8 @@ function defineAsyncComponent(
     onEnd,
     onError,
     loader,
-    Component
+    Component,
+    use,
   }
 ) {
   const AsyncComponent = forwardRef(function AsyncComponent(props, ref) {
@@ -325,6 +345,7 @@ function defineAsyncComponent(
     const first = useRef(true);
     const el = useRef(null);
     const [watchOptions, forceUpdateFlag, isWatching] = useWatchOptions(first);
+    const useValue = use?.(props, watchOptions);
     useImperativeHandle(ref, () => watchOptions, []);
     if (first.current) {
       first.current = false;
@@ -339,7 +360,7 @@ function defineAsyncComponent(
       }
     }
     return el.current = createElement(Await, {
-      resolve: loader(props),
+      resolve: loader(props, watchOptions, useValue),
       init: initValue,
       delay,
       onStart,
@@ -348,7 +369,7 @@ function defineAsyncComponent(
     }, ({first, status, value, error}) => {
       return createElement(
         asyncContext.Provider,
-        {value: {first, status, value, error, watchOptions}},
+        {value: {first, status, value, error, watchOptions, useValue}},
         createElement(Component, props)
       );
     });
@@ -358,8 +379,8 @@ function defineAsyncComponent(
 }
 
 /**
- * @template T
- * @return {{first: boolean; status: Status; value: T; error: any; watchOptions: WatchOptions}}
+ * @template T, U
+ * @return {{first: boolean; status: Status; value: T; error: any; watchOptions: WatchOptions; useValue: U;} | null}
  */
 function useAsyncValue() {
   return useContext(asyncContext);
@@ -372,12 +393,7 @@ function useForceUpdate() {
   }, []);
 }
 
-function __async() {
-  return new Promise(_ => _);
-}
-
-function useView(root, rootIsParent, rootMargin, threshold, onIntersection) {
-  const forceUpdate = useForceUpdate();
+function useView(handle, root, rootIsParent, rootMargin, threshold, onIntersection) {
   const placeholder = useRef(null);
   const flag = useRef(false);
   useEffect(() => {
@@ -387,32 +403,23 @@ function useView(root, rootIsParent, rootMargin, threshold, onIntersection) {
           flag.current = true;
           observer.disconnect();
           observer = null;
-          forceUpdate();
+          handle();
         }
       }, {root: rootIsParent ? placeholder.current.parentElement : root?.current, rootMargin, threshold});
       observer.observe(placeholder.current);
       return () => {
         observer?.disconnect();
+        observer = null;
       };
     } else {
       flag.current = true;
-      forceUpdate();
+      handle();
     }
   }, []);
   return {
     placeholder,
     flag,
   };
-}
-
-function useViewContextValue() {
-  const isUsed = useRef(false);
-  const value = useContext(viewContext);
-  if (!isUsed.current && value !== null) {
-    isUsed.current = true;
-    return value;
-  }
-  return null;
 }
 
 function useWatchOptions(first) {
@@ -468,6 +475,22 @@ function defaultIntersection(entry) {
 
 function defaultCompare(newProps, oldProps) {
   return Object.entries(newProps).some(([key, value]) => value !== oldProps[key]);
+}
+
+function defaultGenerateResolve(element, watchOptions, useValue) {
+  return element.type(element.props, watchOptions, useValue);
+}
+
+function defaultInit() {
+}
+
+function withResolvers() {
+  let resolve, reject;
+  const promise = new Promise((_resolve, _reject) => {
+    resolve = _resolve;
+    reject = _reject;
+  });
+  return {promise, resolve, reject};
 }
 
 /**

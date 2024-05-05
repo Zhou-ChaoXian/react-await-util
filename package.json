@@ -2,9 +2,9 @@
   "name": "react-await-component",
   "version": "1.0.0",
   "description": "react 异步组件",
-  "main": "./src/await.js",
-  "module": "./src/await.js",
-  "types": "./src/await.d.ts",
+  "main": "./dist/index.js",
+  "module": "./dist/es/index.mjs",
+  "types": "./dist/index.d.ts",
   "scripts": {
     "start": "rollup -c"
   },
