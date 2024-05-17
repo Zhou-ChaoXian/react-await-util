@@ -22,6 +22,8 @@ export {
   Async,
   AsyncView,
   defineAsyncComponent,
+  Action,
+  useActionValue,
   useAsyncValue,
   isPending,
   isResolve,
@@ -33,6 +35,7 @@ const nop = Symbol(), noRender = Symbol();
 const orders = new Set(["forwards", "backwards", "together"]);
 const asyncViewContext = createContext(defaultGenerateResolve);
 const asyncContext = createContext(null);
+const actionContext = createContext(null);
 
 /**
  * @typedef {"pending" | "resolve" | "reject"} Status
@@ -40,16 +43,17 @@ const asyncContext = createContext(null);
 
 /**
  * @template T
- * @param resolve {Promise<T>}
+ * @param [resolve] {Promise<T>}
  * @param [init] {T}
  * @param [delay] {number}
+ * @param [jumpFirst] {boolean}
  * @param children {(resolveData: {first?: boolean; status?: Status; value: T; error?: any; placeholder?: React.RefObject<any>;}) => React.ReactElement}
  * @param [onStart] {(first: boolean) => void}
  * @param [onEnd] {(first: boolean) => void}
  * @param [onError] {(error: any) => void}
  * @param [placeholder] {React.RefObject<any>}
  */
-function Await({resolve, init, delay = 300, children, onStart, onEnd, onError, placeholder}) {
+function Await({resolve, init, delay = 300, jumpFirst = false, children, onStart, onEnd, onError, placeholder}) {
   const forceUpdate = useForceUpdate();
   const first = useRef(true);
   const cancelMap = useRef(new Map()).current;
@@ -58,6 +62,13 @@ function Await({resolve, init, delay = 300, children, onStart, onEnd, onError, p
   const element = useRef(null);
   const status = useRef("pending");
   const resolveValue = useRef(init);
+  if (jumpFirst && first.current) {
+    first.current = false;
+    resolve = Object.defineProperties(Promise.resolve(init), {
+      [_tracked]: {value: true},
+      [_data]: {value: init},
+    });
+  }
   if (resolve instanceof Promise) {
     if (cacheResolve.current === resolve && !updateFlag.current)
       return element.current;
@@ -200,18 +211,17 @@ function AwaitView({root, rootIsParent, rootMargin, threshold, children, onInter
  */
 
 /**
- * @template P, U
+ * @template P
  * @typedef {{
  *   element: React.ReactElement;
  *   init?: React.ReactElement;
- *   children: (asyncResolveData: {first?: boolean; status?: Status; element: React.ReactElement; error?: any; placeholder?: React.RefObject<any>; watchOptions?: WatchOptions; useValue?: U;}) => React.ReactElement;
+ *   children: (asyncResolveData: {first?: boolean; status?: Status; element: React.ReactElement; error?: any; placeholder?: React.RefObject<any>; watchOptions?: WatchOptions; }) => React.ReactElement;
  *   compare?: (newProps: P, oldProps: P) => boolean;
  *   delay?: number;
  *   onStart?: (first: boolean) => void;
  *   onEnd?: (first: boolean) => void;
  *   onError?: (error: any) => void;
  *   placeholder?: React.RefObject<any>;
- *   use?: (watchOptions: WatchOptions) => U;
  * }} AsyncProps
  */
 
@@ -230,7 +240,6 @@ const Async = forwardRef(function Async(
     onEnd,
     onError,
     placeholder,
-    use,
   },
   ref
 ) {
@@ -240,7 +249,6 @@ const Async = forwardRef(function Async(
   const el = useRef(null);
   const generateResolve = useContext(asyncViewContext);
   const [watchOptions, forceUpdateFlag, isWatching] = useWatchOptions(first);
-  const useValue = use?.(watchOptions);
   useImperativeHandle(ref, () => watchOptions, []);
   if (!(isValidElement(element) && typeof element.type === "function")) return;
   if (first.current) {
@@ -258,7 +266,7 @@ const Async = forwardRef(function Async(
     }
   }
   return el.current = createElement(Await, {
-    resolve: generateResolve(element, watchOptions, useValue),
+    resolve: generateResolve(element, watchOptions),
     init,
     delay,
     onStart,
@@ -266,7 +274,7 @@ const Async = forwardRef(function Async(
     onError,
     placeholder,
   }, ({first, status, value, error, placeholder}) => {
-    return children({first, status, element: value, error, placeholder, watchOptions, useValue});
+    return children({first, status, element: value, error, placeholder, watchOptions});
   });
 });
 
@@ -288,8 +296,8 @@ function AsyncView({root, rootIsParent, rootMargin, threshold, children, onInter
     const {promise, resolve} = withResolvers();
     let realResolve;
     return [
-      (element, watchOptions, useValue) => {
-        realResolve = defaultGenerateResolve(element, watchOptions, useValue);
+      (element, watchOptions) => {
+        realResolve = defaultGenerateResolve(element, watchOptions);
         return flag.current ? realResolve : promise;
       },
       () => {
@@ -312,7 +320,7 @@ function AsyncView({root, rootIsParent, rootMargin, threshold, children, onInter
 }
 
 /**
- * @template T, P, U
+ * @template T, P
  * @param [name] {string}
  * @param [init] {(props: P) => T}
  * @param [compare] {(newProps: P, oldProps: P) => boolean}
@@ -320,9 +328,8 @@ function AsyncView({root, rootIsParent, rootMargin, threshold, children, onInter
  * @param [onStart] {(first: boolean) => void}
  * @param [onEnd] {(first: boolean) => void}
  * @param [onError] {(error: any) => void}
- * @param loader {(props: P, watchOptions: WatchOptions, useValue: U) => Promise<T>}
+ * @param loader {(props: P, watchOptions: WatchOptions) => Promise<T>}
  * @param Component {(props: P) => React.ReactElement}
- * @param [use] {(props: P, watchOptions: WatchOptions) => U}
  * @return {React.ForwardRefExoticComponent<React.PropsWithoutRef<P> & React.RefAttributes<WatchOptions>>}
  */
 function defineAsyncComponent(
@@ -336,7 +343,6 @@ function defineAsyncComponent(
     onError,
     loader,
     Component,
-    use,
   }
 ) {
   const AsyncComponent = forwardRef(function AsyncComponent(props, ref) {
@@ -345,7 +351,6 @@ function defineAsyncComponent(
     const first = useRef(true);
     const el = useRef(null);
     const [watchOptions, forceUpdateFlag, isWatching] = useWatchOptions(first);
-    const useValue = use?.(props, watchOptions);
     useImperativeHandle(ref, () => watchOptions, []);
     if (first.current) {
       first.current = false;
@@ -360,7 +365,7 @@ function defineAsyncComponent(
       }
     }
     return el.current = createElement(Await, {
-      resolve: loader(props, watchOptions, useValue),
+      resolve: loader(props, watchOptions),
       init: initValue,
       delay,
       onStart,
@@ -369,7 +374,7 @@ function defineAsyncComponent(
     }, ({first, status, value, error}) => {
       return createElement(
         asyncContext.Provider,
-        {value: {first, status, value, error, watchOptions, useValue}},
+        {value: {first, status, value, error, watchOptions}},
         createElement(Component, props)
       );
     });
@@ -379,8 +384,29 @@ function defineAsyncComponent(
 }
 
 /**
- * @template T, U
- * @return {{first: boolean; status: Status; value: T; error: any; watchOptions: WatchOptions; useValue: U;} | null}
+ * @template S, O
+ * @param useAction {(options?: O) => S}
+ * @param [options] {O}
+ * @param children {React.ReactElement | ((state: S) => React.ReactElement)}
+ * @return {React.ReactElement}
+ */
+function Action({useAction, options, children}) {
+  const state = useAction(options);
+  const elements = typeof children === "function" ? children(state) : children;
+  return createElement(actionContext.Provider, {value: state, children: elements});
+}
+
+/**
+ * @template S
+ * @return {S}
+ */
+function useActionValue() {
+  return useContext(actionContext);
+}
+
+/**
+ * @template T
+ * @return {{first: boolean; status: Status; value: T; error: any; watchOptions: WatchOptions; } | null}
  */
 function useAsyncValue() {
   return useContext(asyncContext);
@@ -477,8 +503,8 @@ function defaultCompare(newProps, oldProps) {
   return Object.entries(newProps).some(([key, value]) => value !== oldProps[key]);
 }
 
-function defaultGenerateResolve(element, watchOptions, useValue) {
-  return element.type(element.props, watchOptions, useValue);
+function defaultGenerateResolve(element, watchOptions) {
+  return element.type(element.props, watchOptions);
 }
 
 function defaultInit() {
