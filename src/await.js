@@ -23,6 +23,9 @@ export {
   AsyncView,
   defineAsyncComponent,
   Action,
+  AwaitWatch,
+  AwaitWatchArray,
+  AwaitWatchObject,
   useActionValue,
   useAsyncValue,
   isPending,
@@ -33,9 +36,9 @@ export {
 const _data = Symbol(), _error = Symbol(), _tracked = Symbol();
 const nop = Symbol(), noRender = Symbol();
 const orders = new Set(["forwards", "backwards", "together"]);
-const asyncViewContext = createContext(defaultGenerateResolve);
-const asyncContext = createContext(null);
-const actionContext = createContext(null);
+const AsyncViewContext = createContext(defaultGenerateResolve);
+const AsyncContext = createContext(null);
+const ActionContext = createContext(null);
 
 /**
  * @typedef {"pending" | "resolve" | "reject"} Status
@@ -62,12 +65,9 @@ function Await({resolve, init, delay = 300, jumpFirst = false, children, onStart
   const element = useRef(null);
   const status = useRef("pending");
   const resolveValue = useRef(init);
-  if (jumpFirst && first.current) {
+  if (first.current && jumpFirst) {
     first.current = false;
-    resolve = Object.defineProperties(Promise.resolve(init), {
-      [_tracked]: {value: true},
-      [_data]: {value: init},
-    });
+    resolve = trackedResolve(init);
   }
   if (resolve instanceof Promise) {
     if (cacheResolve.current === resolve && !updateFlag.current)
@@ -203,6 +203,146 @@ function AwaitView({root, rootIsParent, rootMargin, threshold, children, onInter
 }
 
 /**
+ * @template T, Dep
+ * @typedef {{
+ *   dep: Dep;
+ *   compare?: (newDep: Dep, oldDep: Dep) => boolean;
+ *   handle: (newDep?: Dep, oldDep?: Dep) => Promise<T>;
+ *   init?: T;
+ *   delay?: number;
+ *   jumpFirst?: boolean;
+ *   onStart?: (first?: boolean) => void;
+ *   onEnd?: (first?: boolean) => void;
+ *   onError?: (error?: any) => void;
+ *   children: (resolveData: {first?: boolean; status?: Status; value: T; error?: any; watchOptions?: WatchOptions;}) => React.ReactElement;
+ * }} AwaitWatchProps
+ */
+
+/**
+ * @template T
+ * @type {React.ForwardRefExoticComponent<React.PropsWithoutRef<AwaitWatchProps<T>> & React.RefAttributes<WatchOptions>>}
+ */
+const AwaitWatch = forwardRef(function AwaitWatch(
+  {
+    dep,
+    compare = defaultCompare,
+    handle,
+    init,
+    delay = 300,
+    jumpFirst = false,
+    onStart,
+    onEnd,
+    onError,
+    children
+  },
+  ref
+) {
+  const cacheDep = useRef(undefined);
+  const first = useRef(true);
+  const el = useRef(null);
+  const [watchOptions, forceUpdateFlag, isWatching] = useWatchOptions(first);
+  useImperativeHandle(ref, () => watchOptions, []);
+  if (!first.current) {
+    if (!isWatching.current) return el.current;
+    if (forceUpdateFlag.current || compare(dep, cacheDep.current)) {
+      forceUpdateFlag.current = false;
+    } else {
+      return el.current;
+    }
+  }
+  const resolve = (first.current && jumpFirst) ? null : handle(dep, cacheDep.current);
+  first.current = false;
+  cacheDep.current = dep;
+  return el.current = createElement(Await, {
+    resolve,
+    init,
+    delay,
+    jumpFirst,
+    onStart,
+    onEnd,
+    onError,
+  }, ({first, status, value, error}) => {
+    return children({first, status, value, error, watchOptions});
+  });
+});
+
+/**
+ * @template T
+ * @typedef {Omit<AwaitWatchProps<T, any[]>, "compare">} AwaitWatchArrayProps
+ */
+
+/**
+ * @template T
+ * @type {React.ForwardRefExoticComponent<React.PropsWithoutRef<AwaitWatchArrayProps<T>> & React.RefAttributes<WatchOptions>>}
+ */
+const AwaitWatchArray = forwardRef(function AwaitWatchArray(
+  {
+    dep,
+    handle,
+    init,
+    delay = 300,
+    jumpFirst = false,
+    onStart,
+    onEnd,
+    onError,
+    children
+  },
+  ref
+) {
+  return createElement(AwaitWatch, {
+    dep,
+    compare: defaultCompareArray,
+    handle,
+    init,
+    delay,
+    jumpFirst,
+    onStart,
+    onEnd,
+    onError,
+    children,
+    ref,
+  });
+});
+
+/**
+ * @template T
+ * @typedef {Omit<AwaitWatchProps<T, Record<string, any>>, "compare">} AwaitWatchObjectProps
+ */
+
+/**
+ * @template T
+ * @type {React.ForwardRefExoticComponent<React.PropsWithoutRef<AwaitWatchObjectProps<T>> & React.RefAttributes<WatchOptions>>}
+ */
+const AwaitWatchObject = forwardRef(function AwaitWatchObject(
+  {
+    dep,
+    handle,
+    init,
+    delay = 300,
+    jumpFirst = false,
+    onStart,
+    onEnd,
+    onError,
+    children
+  },
+  ref
+) {
+  return createElement(AwaitWatch, {
+    dep,
+    compare: defaultCompareObject,
+    handle,
+    init,
+    delay,
+    jumpFirst,
+    onStart,
+    onEnd,
+    onError,
+    children,
+    ref,
+  });
+});
+
+/**
  * @typedef {{
  *   update: () => void;
  *   unWatch: () => void;
@@ -218,6 +358,7 @@ function AwaitView({root, rootIsParent, rootMargin, threshold, children, onInter
  *   children: (asyncResolveData: {first?: boolean; status?: Status; element: React.ReactElement; error?: any; placeholder?: React.RefObject<any>; watchOptions?: WatchOptions; }) => React.ReactElement;
  *   compare?: (newProps: P, oldProps: P) => boolean;
  *   delay?: number;
+ *   jumpFirst?: boolean;
  *   onStart?: (first: boolean) => void;
  *   onEnd?: (first: boolean) => void;
  *   onError?: (error: any) => void;
@@ -234,8 +375,9 @@ const Async = forwardRef(function Async(
     element,
     init,
     children,
-    compare = defaultCompare,
+    compare = defaultCompareObject,
     delay = 300,
+    jumpFirst = false,
     onStart,
     onEnd,
     onError,
@@ -247,28 +389,27 @@ const Async = forwardRef(function Async(
   const cacheProps = useRef(null);
   const first = useRef(true);
   const el = useRef(null);
-  const generateResolve = useContext(asyncViewContext);
+  const generateResolve = useContext(AsyncViewContext);
   const [watchOptions, forceUpdateFlag, isWatching] = useWatchOptions(first);
   useImperativeHandle(ref, () => watchOptions, []);
   if (!(isValidElement(element) && typeof element.type === "function")) return;
-  if (first.current) {
-    first.current = false;
-    cacheType.current = element.type;
-    cacheProps.current = element.props;
-  } else {
+  if (!first.current) {
     if (!isWatching.current) return el.current;
     if (forceUpdateFlag.current || element.type !== cacheType.current || compare(element.props, cacheProps.current)) {
       forceUpdateFlag.current = false;
-      cacheType.current = element.type;
-      cacheProps.current = element.props;
     } else {
       return el.current;
     }
   }
+  const resolve = (first.current && jumpFirst) ? null : generateResolve(element, watchOptions);
+  first.current = false;
+  cacheType.current = element.type;
+  cacheProps.current = element.props;
   return el.current = createElement(Await, {
-    resolve: generateResolve(element, watchOptions),
+    resolve,
     init,
     delay,
+    jumpFirst,
     onStart,
     onEnd,
     onError,
@@ -315,7 +456,7 @@ function AsyncView({root, rootIsParent, rootMargin, threshold, children, onInter
       value = generateResolve;
       childrenEl = cloneElement(children, {placeholder});
     }
-    return createElement(asyncViewContext.Provider, {value}, childrenEl);
+    return createElement(AsyncViewContext.Provider, {value}, childrenEl);
   }
 }
 
@@ -325,6 +466,7 @@ function AsyncView({root, rootIsParent, rootMargin, threshold, children, onInter
  * @param [init] {(props: P) => T}
  * @param [compare] {(newProps: P, oldProps: P) => boolean}
  * @param [delay] {number}
+ * @param [jumpFirst] {boolean}
  * @param [onStart] {(first: boolean) => void}
  * @param [onEnd] {(first: boolean) => void}
  * @param [onError] {(error: any) => void}
@@ -336,8 +478,9 @@ function defineAsyncComponent(
   {
     name = "AsyncComponent",
     init = defaultInit,
-    compare = defaultCompare,
+    compare = defaultCompareObject,
     delay = 300,
+    jumpFirst = false,
     onStart,
     onEnd,
     onError,
@@ -352,28 +495,28 @@ function defineAsyncComponent(
     const el = useRef(null);
     const [watchOptions, forceUpdateFlag, isWatching] = useWatchOptions(first);
     useImperativeHandle(ref, () => watchOptions, []);
-    if (first.current) {
-      first.current = false;
-      cacheProps.current = props;
-    } else {
+    if (!first.current) {
       if (!isWatching.current) return el.current;
       if (forceUpdateFlag.current || compare(props, cacheProps.current)) {
         forceUpdateFlag.current = false;
-        cacheProps.current = props;
       } else {
         return el.current;
       }
     }
+    const resolve = (first.current && jumpFirst) ? null : loader(props, watchOptions);
+    first.current = false;
+    cacheProps.current = props;
     return el.current = createElement(Await, {
-      resolve: loader(props, watchOptions),
+      resolve,
       init: initValue,
       delay,
+      jumpFirst,
       onStart,
       onEnd,
       onError
     }, ({first, status, value, error}) => {
       return createElement(
-        asyncContext.Provider,
+        AsyncContext.Provider,
         {value: {first, status, value, error, watchOptions}},
         createElement(Component, props)
       );
@@ -393,7 +536,7 @@ function defineAsyncComponent(
 function Action({useAction, options, children}) {
   const state = useAction(options);
   const elements = typeof children === "function" ? children(state) : children;
-  return createElement(actionContext.Provider, {value: state, children: elements});
+  return createElement(ActionContext.Provider, {value: state, children: elements});
 }
 
 /**
@@ -401,7 +544,7 @@ function Action({useAction, options, children}) {
  * @return {S}
  */
 function useActionValue() {
-  return useContext(actionContext);
+  return useContext(ActionContext);
 }
 
 /**
@@ -409,7 +552,7 @@ function useActionValue() {
  * @return {{first: boolean; status: Status; value: T; error: any; watchOptions: WatchOptions; } | null}
  */
 function useAsyncValue() {
-  return useContext(asyncContext);
+  return useContext(AsyncContext);
 }
 
 function useForceUpdate() {
@@ -480,6 +623,13 @@ function trackedPromise(promise) {
   );
 }
 
+function trackedResolve(value) {
+  return Object.defineProperties(Promise.resolve(value), {
+    [_tracked]: {value: true},
+    [_data]: {value},
+  });
+}
+
 function sleep(delay, value) {
   return new Promise(resolve => setTimeout(resolve, delay, value));
 }
@@ -499,8 +649,16 @@ function defaultIntersection(entry) {
   return entry.isIntersecting;
 }
 
-function defaultCompare(newProps, oldProps) {
-  return Object.entries(newProps).some(([key, value]) => value !== oldProps[key]);
+function defaultCompare(newDep, oldDep) {
+  return newDep !== oldDep;
+}
+
+function defaultCompareObject(newDep, oldDep) {
+  return Object.entries(newDep).some(([key, value]) => value !== oldDep[key]);
+}
+
+function defaultCompareArray(newDep, oldDep) {
+  return newDep.some((value, index) => value !== oldDep[index]);
 }
 
 function defaultGenerateResolve(element, watchOptions) {

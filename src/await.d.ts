@@ -9,10 +9,10 @@ import type {
 export type Status = "pending" | "resolve" | "reject";
 
 export interface ResolveData<T> {
-  first?: boolean;
-  status?: Status;
+  first: boolean;
+  status: Status;
   value: T;
-  error?: any;
+  error: any;
   placeholder?: RefObject<any>;
 }
 
@@ -25,7 +25,7 @@ export interface AsyncResolveData {
   watchOptions?: WatchOptions;
 }
 
-export type UseAsyncValue<T> = Omit<Required<ResolveData<T> & { watchOptions: WatchOptions; }>, "placeholder">;
+export type UseAsyncValue<T> = Omit<ResolveData<T>, "placeholder"> & { watchOptions: WatchOptions; };
 
 export interface AwaitProps<T> {
   resolve?: Promise<T>;
@@ -62,6 +62,7 @@ export interface AsyncProps {
   init?: ReactElement;
   compare?: (newProps: Record<string, any>, oldProps: Record<string, any>) => boolean;
   delay?: number;
+  jumpFirst?: boolean;
   onStart?: (first: boolean) => void;
   onEnd?: (first: boolean) => void;
   onError?: (error: any) => void;
@@ -80,6 +81,7 @@ export interface AsyncComponentOptions<T, P> {
   init?: (props: P) => T;
   compare?: (newProps: P, oldProps: P) => boolean;
   delay?: number;
+  jumpFirst?: boolean;
   onStart?: (first: boolean) => void;
   onEnd?: (first: boolean) => void;
   onError?: (error: any) => void;
@@ -93,13 +95,32 @@ export interface ActionProps<S, O> {
   children: ((state: S) => ReactElement) | ReactElement;
 }
 
+export type AwaitWatchResolve<T> = Omit<ResolveData<T>, "placeholder"> & { watchOptions: WatchOptions; };
+
+export interface AwaitWatchProps<T, Dep> {
+  dep: Dep;
+  handle: (newDep?: Dep, oldDep?: Dep) => Promise<T>;
+  compare?: (newDep: Dep, oldDep: Dep) => boolean;
+  init?: T;
+  delay?: number;
+  jumpFirst?: boolean;
+  onStart?: (first: boolean) => void;
+  onEnd?: (first: boolean) => void;
+  onError?: (error: any) => void;
+  children: (resolveData: AwaitWatchResolve<T>) => ReactElement;
+}
+
+export type AwaitWatchArrayProps<T> = Omit<AwaitWatchProps<T, any[]>, "compare">;
+
+export type AwaitWatchObjectProps<T> = Omit<AwaitWatchProps<T, Record<string, any>>, "compare">;
+
 export declare function Await<T>(props: AwaitProps<T>): ReactElement;
 
 export declare function AwaitList(props: AwaitListProps): ReactElement;
 
 export declare function AwaitView(props: AwaitViewProps): ReactElement;
 
-export declare const Async: ForwardRefExoticComponent<PropsWithoutRef<AsyncProps> & RefAttributes<WatchOptions>>;
+export declare function Async(props: AsyncProps): ReactElement;
 
 export declare function AsyncView(props: AsyncViewProps): ReactElement;
 
@@ -116,3 +137,9 @@ export declare function useAsyncValue<T>(): UseAsyncValue<T>;
 export declare function Action<S, O = any>(props: ActionProps<S, O>): ReactElement;
 
 export declare function useActionValue<S>(): S;
+
+export declare function AwaitWatch<T, Deps = any>(props: AwaitWatchProps<T, Deps>): ReactElement;
+
+export declare function AwaitWatchArray<T>(props: AwaitWatchArrayProps<T>): ReactElement;
+
+export declare function AwaitWatchObject<T>(props: AwaitWatchObjectProps<T>): ReactElement;
