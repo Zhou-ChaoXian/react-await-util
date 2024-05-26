@@ -26,7 +26,6 @@ export {
   AwaitWatch,
   AwaitWatchArray,
   AwaitWatchObject,
-  useActionValue,
   useAsyncValue,
   isPending,
   isResolve,
@@ -38,7 +37,6 @@ const nop = Symbol(), noRender = Symbol();
 const orders = new Set(["forwards", "backwards", "together"]);
 const AsyncViewContext = createContext(defaultGenerateResolve);
 const AsyncContext = createContext(null);
-const ActionContext = createContext(null);
 
 /**
  * @typedef {"pending" | "resolve" | "reject"} Status
@@ -69,26 +67,27 @@ function Await({resolve, init, delay = 300, jumpFirst = false, children, onStart
     first.current = false;
     resolve = trackedResolve(init);
   }
-  if (resolve instanceof Promise) {
-    if (cacheResolve.current === resolve && !updateFlag.current)
-      return element.current;
-    updateFlag.current = false;
-    if (!Reflect.has(resolve, _tracked)) {
-      Object.defineProperty(resolve, _tracked, {value: true});
-      cancelMap.get(cacheResolve.current)?.();
-      cacheResolve.current = resolve;
-      let flag = true;
-      cancelMap.set(resolve, () => {
-        flag = false;
-        cancelMap.delete(resolve);
-      });
-      status.current = "pending";
-      onStart?.(first.current);
-      resolve.then(
-        v => Object.defineProperty(resolve, _data, {value: v}),
-        e => Object.defineProperty(resolve, _error, {value: e})
-      ).finally(async () => {
-        await sleep(delay);
+  if (!(resolve instanceof Promise))
+    return;
+  if (cacheResolve.current === resolve && !updateFlag.current)
+    return element.current;
+  updateFlag.current = false;
+  if (!Reflect.has(resolve, _tracked)) {
+    Object.defineProperty(resolve, _tracked, {value: true});
+    cancelMap.get(cacheResolve.current)?.();
+    cacheResolve.current = resolve;
+    let flag = true;
+    cancelMap.set(resolve, () => {
+      flag = false;
+      cancelMap.delete(resolve);
+    });
+    status.current = "pending";
+    onStart?.(first.current);
+    resolve.then(
+      v => Object.defineProperty(resolve, _data, {value: v}),
+      e => Object.defineProperty(resolve, _error, {value: e})
+    ).finally(() => {
+      setTimeout(() => {
         if (flag) {
           cancelMap.delete(resolve);
           onEnd?.(first.current);
@@ -96,26 +95,25 @@ function Await({resolve, init, delay = 300, jumpFirst = false, children, onStart
           updateFlag.current = true;
           forceUpdate();
         }
-      });
-    } else {
-      cacheResolve.current = resolve;
-      if (Reflect.has(resolve, _data)) {
-        status.current = "resolve";
-        resolveValue.current = Reflect.get(resolve, _data);
-      } else {
-        status.current = "reject";
-        onError?.(Reflect.get(resolve, _error));
-      }
-    }
-    element.current = children({
-      first: first.current,
-      status: status.current,
-      value: resolveValue.current,
-      error: Reflect.get(resolve, _error),
-      placeholder,
+      }, delay);
     });
-    return element.current;
+  } else {
+    cacheResolve.current = resolve;
+    if (Reflect.has(resolve, _data)) {
+      status.current = "resolve";
+      resolveValue.current = Reflect.get(resolve, _data);
+    } else {
+      status.current = "reject";
+      onError?.(Reflect.get(resolve, _error));
+    }
   }
+  return element.current = children({
+    first: first.current,
+    status: status.current,
+    value: resolveValue.current,
+    error: Reflect.get(resolve, _error),
+    placeholder,
+  });
 }
 
 /**
@@ -185,27 +183,37 @@ function AwaitList({order, tail, gap = 300, children}) {
  * @param children {React.ReactElement}
  * @param [onIntersection] {(entry: IntersectionObserverEntry) => boolean}
  */
-function AwaitView({root, rootIsParent, rootMargin, threshold, children, onIntersection = defaultIntersection}) {
-  const valid =
-    isValidElement(children) &&
-    children.type === Await &&
-    children.props.resolve instanceof Promise;
+function AwaitView(
+  {
+    root,
+    rootIsParent = false,
+    rootMargin,
+    threshold,
+    children,
+    onIntersection = defaultIntersection
+  }
+) {
+  const [valid] = useState(() => {
+    return isValidElement(children) &&
+      children.type === Await &&
+      children.props.resolve instanceof Promise;
+  });
   const [[resolve, handle]] = useState(() => {
     const {promise, resolve} = withResolvers();
-    return [promise, () => {
-      valid && resolve(trackedPromise(children.props.resolve));
-    }];
+    const value = trackedPromise(children.props.resolve);
+    return [promise, () => valid && resolve(value)];
   });
   const {placeholder, flag} = useView(handle, root, rootIsParent, rootMargin, threshold, onIntersection);
-  if (valid) {
-    return flag.current ? children : cloneElement(children, {resolve, placeholder});
-  }
+  if (valid)
+    return flag.current ?
+      children :
+      cloneElement(children, {resolve, placeholder});
 }
 
 /**
  * @template T, Dep
  * @typedef {{
- *   dep: Dep;
+ *   dep?: Dep;
  *   compare?: (newDep: Dep, oldDep: Dep) => boolean;
  *   handle: (newDep?: Dep, oldDep?: Dep) => Promise<T>;
  *   init?: T;
@@ -243,7 +251,8 @@ const AwaitWatch = forwardRef(function AwaitWatch(
   const [watchOptions, forceUpdateFlag, isWatching] = useWatchOptions(first);
   useImperativeHandle(ref, () => watchOptions, []);
   if (!first.current) {
-    if (!isWatching.current) return el.current;
+    if (!isWatching.current)
+      return el.current;
     if (forceUpdateFlag.current || compare(dep, cacheDep.current)) {
       forceUpdateFlag.current = false;
     } else {
@@ -277,7 +286,7 @@ const AwaitWatch = forwardRef(function AwaitWatch(
  */
 const AwaitWatchArray = forwardRef(function AwaitWatchArray(
   {
-    dep,
+    dep = [],
     handle,
     init,
     delay = 300,
@@ -315,7 +324,7 @@ const AwaitWatchArray = forwardRef(function AwaitWatchArray(
  */
 const AwaitWatchObject = forwardRef(function AwaitWatchObject(
   {
-    dep,
+    dep = {},
     handle,
     init,
     delay = 300,
@@ -392,9 +401,10 @@ const Async = forwardRef(function Async(
   const generateResolve = useContext(AsyncViewContext);
   const [watchOptions, forceUpdateFlag, isWatching] = useWatchOptions(first);
   useImperativeHandle(ref, () => watchOptions, []);
-  if (!(isValidElement(element) && typeof element.type === "function")) return;
+  if (!isValidElement(element) || typeof element.type !== "function") return;
   if (!first.current) {
-    if (!isWatching.current) return el.current;
+    if (!isWatching.current)
+      return el.current;
     if (forceUpdateFlag.current || element.type !== cacheType.current || compare(element.props, cacheProps.current)) {
       forceUpdateFlag.current = false;
     } else {
@@ -428,11 +438,12 @@ const Async = forwardRef(function Async(
  * @param [onIntersection] {(entry: IntersectionObserverEntry) => boolean}
  */
 function AsyncView({root, rootIsParent, rootMargin, threshold, children, onIntersection = defaultIntersection}) {
-  const valid =
-    isValidElement(children) &&
-    children.type === Async &&
-    isValidElement(children.props.element) &&
-    typeof children.props.element.type === "function";
+  const [valid] = useState(() => {
+    return isValidElement(children) &&
+      children.type === Async &&
+      isValidElement(children.props.element) &&
+      typeof children.props.element.type === "function";
+  });
   const [[generateResolve, handle]] = useState(() => {
     const {promise, resolve} = withResolvers();
     let realResolve;
@@ -496,7 +507,8 @@ function defineAsyncComponent(
     const [watchOptions, forceUpdateFlag, isWatching] = useWatchOptions(first);
     useImperativeHandle(ref, () => watchOptions, []);
     if (!first.current) {
-      if (!isWatching.current) return el.current;
+      if (!isWatching.current)
+        return el.current;
       if (forceUpdateFlag.current || compare(props, cacheProps.current)) {
         forceUpdateFlag.current = false;
       } else {
@@ -530,21 +542,12 @@ function defineAsyncComponent(
  * @template S, O
  * @param useAction {(options?: O) => S}
  * @param [options] {O}
- * @param children {React.ReactElement | ((state: S) => React.ReactElement)}
+ * @param children {(state: S) => React.ReactElement}
  * @return {React.ReactElement}
  */
 function Action({useAction, options, children}) {
   const state = useAction(options);
-  const elements = typeof children === "function" ? children(state) : children;
-  return createElement(ActionContext.Provider, {value: state, children: elements});
-}
-
-/**
- * @template S
- * @return {S}
- */
-function useActionValue() {
-  return useContext(ActionContext);
+  return children(state);
 }
 
 /**
