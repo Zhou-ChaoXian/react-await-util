@@ -1,13 +1,29 @@
 {
-  "name": "react-await-component",
+  "name": "react-await-util",
   "version": "1.0.0",
-  "description": "react 异步组件",
+  "description": "处理组件中的 promise",
   "main": "./dist/index.js",
   "module": "./dist/es/index.mjs",
   "types": "./dist/index.d.ts",
   "scripts": {
     "start": "rollup -c"
   },
+  "keywords": [
+    "react",
+    "Await",
+    "Async",
+    "component",
+    "react-await-component"
+  ],
+  "author": {
+    "name": "Zhou-ChaoXian",
+    "email": "2542606900@qq.com"
+  },
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/Zhou-ChaoXian/react-await-util.git"
+  },
+  "license": "MIT",
   "devDependencies": {
     "react": "^18.2.0",
     "react-dom": "^18.2.0",
@@ -19,20 +35,5 @@
   "peerDependencies": {
     "react": "^18.2.0",
     "react-dom": "^18.2.0"
-  },
-  "keywords": [
-    "react",
-    "Await",
-    "Async",
-    "react-await-component"
-  ],
-  "author": {
-    "name": "Zhou-ChaoXian",
-    "email": "2542606900@qq.com"
-  },
-  "repository": {
-    "type": "git",
-    "url": ""
-  },
-  "license": "MIT"
+  }
 }
