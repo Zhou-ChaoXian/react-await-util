@@ -44,30 +44,32 @@ const Async = forwardRef(function Async(
   },
   ref
 ) {
+  const cacheResolve = useRef(null);
   const cacheType = useRef(null);
   const cacheProps = useRef(null);
   const first = useRef(true);
-  const el = useRef(null);
   const generateResolve = useContext(GenerateResolveContext);
   const [watchOptions, isUpdate, isWatching] = useWatchOptions();
   useImperativeHandle(ref, () => watchOptions, []);
   if (!isValidElement(element) || typeof element.type !== "function")
     return;
-  if (!first.current) {
-    if (!isWatching.current)
-      return el.current;
-    if (isUpdate.current || element.type !== cacheType.current || compare(element.props, cacheProps.current)) {
+  if (first.current) {
+    first.current = false;
+    if (!jumpFirst)
+      cacheResolve.current = generateResolve(element, watchOptions);
+  } else {
+    if (
+      isWatching.current &&
+      (isUpdate.current || element.type !== cacheType.current || compare(element.props, cacheProps.current))
+    ) {
       isUpdate.current = false;
-    } else {
-      return el.current;
+      cacheResolve.current = generateResolve(element, watchOptions);
     }
   }
-  const resolve = (first.current && jumpFirst) ? null : generateResolve(element, watchOptions);
-  first.current = false;
   cacheType.current = element.type;
   cacheProps.current = element.props;
-  return el.current = createElement(Await, {
-    resolve,
+  return createElement(Await, {
+    resolve: cacheResolve.current,
     init,
     delay,
     jumpFirst,
@@ -134,41 +136,43 @@ function defineAsyncComponent(
     onStart,
     onEnd,
     onError,
+    onComputed,
     loader,
     Component,
   }
 ) {
   const AsyncComponent = forwardRef(function AsyncComponent(props, ref) {
+    const cacheResolve = useRef(null);
     const cacheProps = useRef(null);
     const first = useRef(true);
     const el = useRef(null);
     const [watchOptions, isUpdate, isWatching] = useWatchOptions();
     const [initValue] = useState(() => init(props, watchOptions));
     useImperativeHandle(ref, () => watchOptions, []);
-    if (!first.current) {
-      if (!isWatching.current)
-        return el.current;
-      if (isUpdate.current || compare(props, cacheProps.current)) {
+    if (first.current) {
+      first.current = false;
+      if (!jumpFirst)
+        cacheResolve.current = loader(props, watchOptions);
+    } else {
+      if (isWatching.current && (isUpdate.current || compare(props, cacheProps.current))) {
         isUpdate.current = false;
-      } else {
-        return el.current;
+        cacheResolve.current = loader(props, watchOptions);
       }
     }
-    const resolve = (first.current && jumpFirst) ? null : loader(props, watchOptions);
-    first.current = false;
     cacheProps.current = props;
     return el.current = createElement(Await, {
-      resolve,
+      resolve: cacheResolve.current,
       init: initValue,
       delay,
       jumpFirst,
       onStart,
       onEnd,
-      onError
-    }, ({first, status, value, error}) => {
+      onError,
+      onComputed,
+    }, ({first, status, value, error, computed}) => {
       return createElement(
         AsyncValueContext.Provider,
-        {value: {first, status, value, error, watchOptions}},
+        {value: {first, status, value, error, computed, watchOptions}},
         createElement(Component, props)
       );
     });

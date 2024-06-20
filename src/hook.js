@@ -19,22 +19,30 @@ function useWatchOptions() {
   const forceUpdate = useForceUpdate();
   const isUpdate = useRef(false);
   const isWatching = useRef(true);
-  const [watchOptions] = useState(() => ({
-    update: () => {
+  const [watchOptions] = useState(() => {
+    const update = () => {
       isUpdate.current = true;
       forceUpdate();
-    },
-    unWatch: () => {
-      isWatching.current = false;
-    },
-    reWatch: () => {
-      if (isWatching.current)
-        return;
-      isWatching.current = true;
-      isUpdate.current = true;
-      forceUpdate();
-    }
-  }));
+    };
+    return {
+      update,
+      unWatch: () => {
+        if (!isWatching.current)
+          return;
+        isWatching.current = false;
+        update();
+      },
+      reWatch: () => {
+        if (isWatching.current)
+          return;
+        isWatching.current = true;
+        update();
+      },
+      get isWatching() {
+        return isWatching.current;
+      },
+    };
+  });
   return [watchOptions, isUpdate, isWatching];
 }
 

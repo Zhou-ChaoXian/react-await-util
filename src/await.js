@@ -52,62 +52,65 @@ function Await(
   const cancelMap = useRef(new Map()).current;
   const cacheResolve = useRef(null);
   const updateFlag = useRef(false);
-  const element = useRef(null);
   const status = useRef("pending");
   const resolveValue = useRef(init);
+  const computed = useRef(null);
   if (first.current && jumpFirst) {
     first.current = false;
     resolve = trackedResolve(init);
   }
-  if (!(resolve instanceof Promise))
+  if (resolve === noRender)
     return;
-  if (cacheResolve.current === resolve && !updateFlag.current)
-    return element.current;
-  updateFlag.current = false;
-  if (!Reflect.has(resolve, _tracked)) {
-    resolve = Object.defineProperty(resolve, _tracked, {value: true});
-    cancelMap.get(cacheResolve.current)?.();
-    cacheResolve.current = resolve;
-    let flag = true;
-    cancelMap.set(resolve, () => {
-      flag = false;
-      cancelMap.delete(resolve);
-    });
-    status.current = "pending";
-    onStart?.(first.current);
-    resolve.then(
-      v => Object.defineProperty(resolve, _data, {value: v}),
-      e => Object.defineProperty(resolve, _error, {value: e})
-    ).finally(() => {
-      setTimeout(() => {
-        if (flag) {
-          cancelMap.delete(resolve);
-          onEnd?.(first.current);
-          first.current = false;
-          updateFlag.current = true;
-          forceUpdate();
-        }
-      }, delay);
-    });
-  } else {
-    cacheResolve.current = resolve;
-    if (Reflect.has(resolve, _data)) {
-      status.current = "resolve";
-      resolveValue.current = Reflect.get(resolve, _data);
+  if (resolve instanceof Promise && (cacheResolve.current !== resolve || updateFlag.current)) {
+    updateFlag.current = false;
+    if (!Reflect.has(resolve, _tracked)) {
+      resolve = Object.defineProperty(resolve, _tracked, {value: true});
+      cancelMap.get(cacheResolve.current)?.();
+      cacheResolve.current = resolve;
+      let flag = true;
+      cancelMap.set(resolve, () => {
+        flag = false;
+        cancelMap.delete(resolve);
+      });
+      status.current = "pending";
+      onStart?.(first.current);
+      resolve.then(
+        v => Object.defineProperty(resolve, _data, {value: v}),
+        e => Object.defineProperty(resolve, _error, {value: e})
+      ).finally(() => {
+        setTimeout(() => {
+          if (flag) {
+            cancelMap.delete(resolve);
+            onEnd?.(first.current);
+            first.current = false;
+            updateFlag.current = true;
+            forceUpdate();
+          }
+        }, delay);
+      });
     } else {
-      status.current = "reject";
-      onError?.(Reflect.get(resolve, _error));
+      cacheResolve.current = resolve;
+      if (Reflect.has(resolve, _data)) {
+        status.current = "resolve";
+        resolveValue.current = Reflect.get(resolve, _data);
+      } else {
+        status.current = "reject";
+        onError?.(Reflect.get(resolve, _error));
+      }
     }
+    computed.current = onComputed?.({
+      first: first.current,
+      status: status.current,
+      value: resolveValue.current,
+      error: Reflect.get(resolve, _error),
+    });
   }
-  const resolveData = {
+  return children({
     first: first.current,
     status: status.current,
     value: resolveValue.current,
-    error: Reflect.get(resolve, _error),
-  };
-  return element.current = children({
-    ...resolveData,
-    computed: onComputed?.(resolveData),
+    error: resolve && Reflect.get(resolve, _error),
+    computed: computed.current,
     placeholder,
   });
 }
@@ -128,25 +131,24 @@ const AwaitWatch = forwardRef(function AwaitWatch(
   },
   ref
 ) {
-  const cacheDeps = useRef(undefined);
+  const cacheResolve = useRef(null);
+  const cacheDeps = useRef(null);
   const first = useRef(true);
-  const el = useRef(null);
   const [watchOptions, isUpdate, isWatching] = useWatchOptions();
   useImperativeHandle(ref, () => watchOptions, []);
-  if (!first.current) {
-    if (!isWatching.current)
-      return el.current;
-    if (isUpdate.current || compare(deps, cacheDeps.current)) {
+  if (first.current) {
+    first.current = false;
+    if (!jumpFirst)
+      cacheResolve.current = handle(deps, cacheDeps.current);
+  } else {
+    if (isWatching.current && (isUpdate.current || compare(deps, cacheDeps.current))) {
       isUpdate.current = false;
-    } else {
-      return el.current;
+      cacheResolve.current = handle(deps, cacheDeps.current);
     }
   }
-  const resolve = (first.current && jumpFirst) ? null : handle(deps, cacheDeps.current);
-  first.current = false;
   cacheDeps.current = deps;
-  return el.current = createElement(Await, {
-    resolve,
+  return createElement(Await, {
+    resolve: cacheResolve.current,
     init,
     delay,
     jumpFirst,
@@ -222,7 +224,7 @@ const AwaitWatchArray = forwardRef(function AwaitWatchArray(
 });
 
 const orders = new Set(["forwards", "backwards", "together"]);
-const nop = Symbol();
+const nop = Symbol(), noRender = Symbol();
 
 function forEachLeft(container, handle) {
   container.forEach(handle);
@@ -266,7 +268,7 @@ function AwaitList({order, tail, gap = 300, children}) {
         fn(resolves, (resolve, index) => {
           if (resolve instanceof Promise && !Reflect.has(resolve, _tracked)) {
             if (flag) {
-              resolves[index] = undefined;
+              resolves[index] = noRender;
             } else {
               flag = true;
               resolves[index] = trackedPromise(resolve).finally(() => setTimeout(forceUpdate, gap));

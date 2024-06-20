@@ -72,9 +72,11 @@ export interface WatchOptions {
   update: () => void;
   unWatch: () => void;
   reWatch: () => void;
+
+  get isWatching(): boolean;
 }
 
-export interface AsyncComponentOptions<T, P = Record<string, any>, E = any> {
+export interface AsyncComponentOptions<T, P = Record<string, any>, U = any, E = any> {
   name?: string;
   init?: (props: P, watchOptions: WatchOptions) => T;
   compare?: (newProps: P, oldProps: P) => boolean;
@@ -83,6 +85,7 @@ export interface AsyncComponentOptions<T, P = Record<string, any>, E = any> {
   onStart?: (first: boolean) => void;
   onEnd?: (first: boolean) => void;
   onError?: (error: E) => void;
+  onComputed?: (resolveData: BaseResolveData<T, E>) => U;
   loader: (props: P, watchOptions: WatchOptions) => Promise<T>;
   Component: (props: P) => ReactElement;
 }
@@ -121,13 +124,13 @@ export declare function AwaitList(props: AwaitListProps): ReactElement;
 
 export declare function AwaitView(props: AwaitViewProps): ReactElement;
 
-export declare function Async<P = Record<string, any>>(props: AsyncProps<P>): ReactElement;
+export declare function Async<P = Record<string, any>, U = any, E = any>(props: AsyncProps<P, U, E>): ReactElement;
 
 export declare function AsyncView(props: AwaitViewProps): ReactElement;
 
-export declare function defineAsyncComponent<T = any, Props = Record<string, any>>(options: AsyncComponentOptions<T, Props>): ForwardRefExoticComponent<PropsWithoutRef<Props> & RefAttributes<WatchOptions>>;
+export declare function defineAsyncComponent<T = any, Props = Record<string, any>, U = any, E = any>(options: AsyncComponentOptions<T, Props, U, E>): ForwardRefExoticComponent<PropsWithoutRef<Props> & RefAttributes<WatchOptions>>;
 
-export declare function useAsyncValue<T = any>(): Omit<ResolveData<T>, "placeholder"> & { watchOptions: WatchOptions; };
+export declare function useAsyncValue<T = any, U = any, E = any>(): (Omit<ResolveData<T, U, E>, "placeholder"> & { watchOptions: WatchOptions; });
 
 export declare function Action<S = any, O = any>(props: ActionProps<S, O>): ReactElement;
 
