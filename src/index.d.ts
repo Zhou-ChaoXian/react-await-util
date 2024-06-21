@@ -100,7 +100,7 @@ export interface HostProps {
   children: ReactElement | ReactElement[];
 }
 
-export interface ProvisionProps<P> {
+export interface TmplProps<P> {
   name?: string;
   children: ReactElement | ReactElement[] | ((props: P) => ReactElement);
 }
@@ -136,7 +136,7 @@ export declare function Action<S = any, O = any>(props: ActionProps<S, O>): Reac
 
 export declare function Host(props: HostProps): ReactElement;
 
-export declare function Provision<P = Record<string, any>>(props: ProvisionProps<P>): ReactElement;
+export declare function Tmpl<P = Record<string, any>>(props: TmplProps<P>): ReactElement;
 
 export declare function Slotted(props: SlottedProps): ReactElement;
 

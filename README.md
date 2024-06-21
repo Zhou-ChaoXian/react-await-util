@@ -14,7 +14,7 @@
 8. [`AsyncView`](#asyncview)
 9. [`defineAsyncComponent`](#defineasynccomponent)
 10. [`Action`](#action)
-11. [`Host` `Provision` `Slotted`](#插槽组件)
+11. [`Host` `Tmpl` `Slotted`](#插槽组件)
 
 ### Await
 
@@ -338,8 +338,8 @@ async function Bar({count}, watchOptions) {
 
 ```jsx
 import {useState} from "react";
-import {Async, Host, Provision, Slotted} from "react-await-util";
-import {Skeleton, Flex, Button} from "antd";
+import {Async, Host, Tmpl, Slotted, isPending} from "react-await-util";
+import {Skeleton, Spin, Flex, Button} from "antd";
 
 function Foo() {
   const [count, setCount] = useState(0);
@@ -348,32 +348,38 @@ function Foo() {
   };
 
   return (
-    <Host>
-      <Async element={<Bar/>}>{({first, value}) =>
-        <Skeleton loading={first}>
+    <Async element={<Bar count={count}/>}>{({first, status, value}) =>
+      <Skeleton loading={first}>
+        <Spin spinning={!first && isPending(status)}>
           <Flex justify="center" align="center" vertical gap="middle">
             <Button onClick={add}>add</Button>
-            {value}
+            <Host>
+              {value}
+              <Tmpl>
+                <h1>count - {count}</h1>
+              </Tmpl>
+              <Tmpl name="item">{({watchOptions}) =>
+                <Flex justify="center" align="center" gap="middle">
+                  <Button onClick={watchOptions.update} disabled={!watchOptions.isWatching}>update</Button>
+                  <Button onClick={watchOptions.unWatch} disabled={!watchOptions.isWatching}>unWatch</Button>
+                  <Button onClick={watchOptions.reWatch} disabled={watchOptions.isWatching}>reWatch</Button>
+                </Flex>
+              }</Tmpl>
+            </Host>
           </Flex>
-        </Skeleton>
-      }</Async>
-      <Provision>
-        <h1>{count}</h1>
-      </Provision>
-      <Provision name="item">{({value}) =>
-        <h1>{value}</h1>
-      }</Provision>
-    </Host>
+        </Spin>
+      </Skeleton>
+    }</Async>
   );
 }
 
-async function Bar() {
+async function Bar({count}, watchOptions) {
   await new Promise(resolve => setTimeout(resolve, 1000));
   return (
     <>
-      <h1>hello</h1>
+      <h1>hello - {count}</h1>
       <Slotted/>
-      <Slotted name="item" value="hi"/>
+      <Slotted name="item" watchOptions={watchOptions}/>
     </>
   );
 }
@@ -490,7 +496,6 @@ import {useState, useMemo} from "react";
 import {Action} from "react-await-util";
 import {Flex, Button} from "antd";
 
-
 function Foo() {
   return (
     <Action useAction={useCountAction}>{({count, add}) =>
@@ -531,13 +536,13 @@ function useCalcCountAction({count}) {
 
 > 提供类似于 `vue` 插槽思想的组件  
 > `Host` 宿主  
-> `Provision` 提供  
+> `Tmpl` 模板  
 > `Slotted` 占位  
-> `Host` 只渲染第一个子元素，其他元素都是 `Provision` 组件  
-> `Provision` 和 `Slotted` 的 `name` 一一对应
+> `Host` 只渲染第一个子元素，其他元素都是 `Tmpl` 组件  
+> `Tmpl` 和 `Slotted` 的 `name` 一一对应，默认是 `default`
 
 ```jsx
-import {Host, Provision, Slotted} from "react-await-util";
+import {Host, Tmpl, Slotted} from "react-await-util";
 
 function Foo() {
   return (
@@ -546,12 +551,45 @@ function Foo() {
         <Slotted/>
         <Slotted name="item" value="hi"/>
       </div>
-      <Provision>
+      <Tmpl>
         <h1>hello</h1>
-      </Provision>
-      <Provision name="item">{({value}) =>
+      </Tmpl>
+      <Tmpl name="item">{({value}) =>
         <h1>{value}</h1>
-      }</Provision>
+      }</Tmpl>
+    </Host>
+  );
+}
+```
+
+> `Tmpl` 中的 `Slotted`，和***上一层*** `Host` 的 `Tmpl` 对应
+
+```jsx
+import {Host, Tmpl, Slotted} from "react-await-util";
+
+function Foo() {
+  return (
+    <Host>
+      <Host>
+        <Host>
+          <div>
+            <h1>start</h1>
+            <Slotted/>
+            <h1>end</h1>
+          </div>
+          <Tmpl>
+            <Slotted/>
+            <h1>3</h1>
+          </Tmpl>
+        </Host>
+        <Tmpl>
+          <Slotted/>
+          <h1>2</h1>
+        </Tmpl>
+      </Host>
+      <Tmpl>
+        <h1>1</h1>
+      </Tmpl>
     </Host>
   );
 }

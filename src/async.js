@@ -11,7 +11,7 @@ import {
   useRef,
   useState,
 } from "react";
-import {Await} from './await.js';
+import {Await} from "./await.js";
 import {useWatchOptions, useView} from "./hook.js";
 import {trackedPromise, defaultCompareObject, defaultIntersection, withResolvers} from "./util.js";
 
