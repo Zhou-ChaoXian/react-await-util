@@ -37,9 +37,13 @@
 ```ts
 import type {ReactElement, RefObject} from "react";
 
+declare const pendingStatus: unique symbol;
+declare const resolveStatus: unique symbol;
+declare const rejectStatus: unique symbol;
+
 interface ResolveData {
   first: boolean;  // 是否是第一次执行，一般用于初始化判断，适用骨架屏
-  status: "pending" | "resolve" | "reject";  // 当前状态，一般用于初始化后请求，判断状态，展示 loading 效果
+  status: typeof pendingStatus | typeof resolveStatus | typeof rejectStatus;  // 当前状态，一般用于初始化后请求，判断状态，展示 loading 效果
   value: any;  // Promise 结果，会保留最后一次正确的结果，防止请求出错没有数据，页面空了
   error: any;  // Promise 出错
 }
@@ -122,7 +126,7 @@ interface WatchOptions {
 
 interface ResolveData {
   first: boolean;
-  status: "pending" | "resolve" | "reject";
+  status: typeof pendingStatus | typeof resolveStatus | typeof rejectStatus;
   value: any;
   error: any;
   computed: any;
@@ -276,14 +280,14 @@ function Foo() {
 
 ### Async
 
-> 异步组件，组件可以写成 `async` 函数形式
+> 包装异步组件，被包装的组件可以写成 `async` 函数形式
 
 ***? 表示可选属性***
 
 | `props`     |                  `type`                   | `description`                  |
 |:------------|:-----------------------------------------:|:-------------------------------|
-| element?    |               ReactElement                | 要包装的组件元素                       |
-| compare?    | (newProps: any, oldProps: any) => boolean | 对比函数，默认 element 的 props        |
+| wrap        |               ReactElement                | 要包装的组件元素                       |
+| compare?    | (newProps: any, oldProps: any) => boolean | 对比函数，默认 wrap 的 props           |
 | init?       |                    any                    | 初始值                            |
 | delay?      |                  number                   | 延迟，默认 300 ms，Promise 完成快屏幕会闪烁  |
 | jumpFirst?  |                  boolean                  | 跳过首次请求，一般和 init 配合             |
@@ -307,7 +311,7 @@ function Foo() {
   };
 
   return (
-    <Async element={<Bar count={count}/>}>{({first, status, value}) =>
+    <Async wrap={<Bar count={count}/>}>{({first, status, value}) =>
       <Skeleton loading={first}>
         <Spin spinning={!first && isPending(status)}>
           <Flex justify="center" align="center" vertical gap="middle" style={{height: 200}}>
@@ -333,8 +337,10 @@ async function Bar({count}, watchOptions) {
 }
 ```
 
-> `Async` 会对比 `element` 属性的 props，当 `element` 有子元素时，对比会失效，可以提供 `compare` 自定义对比  
+> `Async` 会对比 `wrap` 属性的 props，当 `wrap` 有子元素时，对比会失效，可以提供 `compare` 自定义对比  
 > 推荐使用 插槽组件
+
+***示例***
 
 ```jsx
 import {useState} from "react";
@@ -348,7 +354,7 @@ function Foo() {
   };
 
   return (
-    <Async element={<Bar count={count}/>}>{({first, status, value}) =>
+    <Async wrap={<Bar count={count}/>}>{({first, status, value}) =>
       <Skeleton loading={first}>
         <Spin spinning={!first && isPending(status)}>
           <Flex justify="center" align="center" vertical gap="middle">
@@ -389,6 +395,8 @@ async function Bar({count}, watchOptions) {
 
 > 同 `AwaitView` 组件
 
+***示例***
+
 ```jsx
 import {Async, AsyncView} from "react-await-util";
 import {Skeleton, Flex} from "antd";
@@ -398,7 +406,7 @@ function Foo() {
     <>
       <div style={{height: "120vh"}}></div>
       <AsyncView threshold={1}>
-        <Async element={<Bar/>}>{({first, value, placeholder}) =>
+        <Async wrap={<Bar/>}>{({first, value, placeholder}) =>
           <Flex ref={placeholder} justify="center" align="center" style={{height: 300}}>
             <Skeleton loading={first}>
               {value}
@@ -438,6 +446,8 @@ async function Bar() {
 | loader      | (props: any, watchOptions: WatchOptions) => Promise | loader，生成 Promise              |
 | Component   |            (props: any) => ReactElement             | 组件                             |
 
+***示例***
+
 ```jsx
 import {defineAsyncComponent, isPending, useAsyncValue} from "react-await-util";
 import {Skeleton, Spin, Flex, Button} from "antd";
@@ -460,7 +470,6 @@ function Foo() {
 }
 
 // Bar 组件依赖 count，count 发生变化，重新调用 loader 生成 promise
-
 const Bar = defineAsyncComponent({
   name: "Bar",
   loader: async ({count}) => {
@@ -490,6 +499,8 @@ const Bar = defineAsyncComponent({
 ### Action
 
 > 将状态和操作封装，仅供子元素使用
+
+***示例***
 
 ```jsx
 import {useState, useMemo} from "react";
@@ -541,6 +552,8 @@ function useCalcCountAction({count}) {
 > `Host` 只渲染第一个子元素，其他元素都是 `Tmpl` 组件  
 > `Tmpl` 和 `Slotted` 的 `name` 一一对应，默认是 `default`
 
+***示例***
+
 ```jsx
 import {Host, Tmpl, Slotted} from "react-await-util";
 
@@ -563,6 +576,8 @@ function Foo() {
 ```
 
 > `Tmpl` 中的 `Slotted`，和***上一层*** `Host` 的 `Tmpl` 对应
+
+***示例***
 
 ```jsx
 import {Host, Tmpl, Slotted} from "react-await-util";

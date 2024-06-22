@@ -31,7 +31,14 @@ export {
   AwaitWatchArray,
   AwaitList,
   AwaitView,
+  isPending,
+  isResolve,
+  isReject,
 };
+
+const pendingStatus = Symbol("pending");
+const resolveStatus = Symbol("resolve");
+const rejectStatus = Symbol("reject");
 
 function Await(
   {
@@ -52,7 +59,7 @@ function Await(
   const cancelMap = useRef(new Map()).current;
   const cacheResolve = useRef(null);
   const updateFlag = useRef(false);
-  const status = useRef("pending");
+  const status = useRef(pendingStatus);
   const resolveValue = useRef(init);
   const computed = useRef(null);
   if (first.current && jumpFirst) {
@@ -72,7 +79,7 @@ function Await(
         flag = false;
         cancelMap.delete(resolve);
       });
-      status.current = "pending";
+      status.current = pendingStatus;
       onStart?.(first.current);
       resolve.then(
         v => Object.defineProperty(resolve, _data, {value: v}),
@@ -91,10 +98,10 @@ function Await(
     } else {
       cacheResolve.current = resolve;
       if (Reflect.has(resolve, _data)) {
-        status.current = "resolve";
+        status.current = resolveStatus;
         resolveValue.current = Reflect.get(resolve, _data);
       } else {
-        status.current = "reject";
+        status.current = rejectStatus;
         onError?.(Reflect.get(resolve, _error));
       }
     }
@@ -164,6 +171,7 @@ const AwaitWatch = forwardRef(function AwaitWatch(
 const AwaitWatchObject = forwardRef(function AwaitWatchObject(
   {
     deps = {},
+    compare = defaultCompareObject,
     handle,
     init,
     delay = 300,
@@ -178,7 +186,7 @@ const AwaitWatchObject = forwardRef(function AwaitWatchObject(
 ) {
   return createElement(AwaitWatch, {
     deps,
-    compare: defaultCompareObject,
+    compare,
     handle,
     init,
     delay,
@@ -195,6 +203,7 @@ const AwaitWatchObject = forwardRef(function AwaitWatchObject(
 const AwaitWatchArray = forwardRef(function AwaitWatchArray(
   {
     deps = [],
+    compare = defaultCompareArray,
     handle,
     init,
     delay = 300,
@@ -209,7 +218,7 @@ const AwaitWatchArray = forwardRef(function AwaitWatchArray(
 ) {
   return createElement(AwaitWatch, {
     deps,
-    compare: defaultCompareArray,
+    compare,
     handle,
     init,
     delay,
@@ -320,4 +329,16 @@ function AwaitView(
     return flag.current ?
       children :
       cloneElement(children, {resolve, placeholder});
+}
+
+function isPending(status) {
+  return status === pendingStatus;
+}
+
+function isResolve(status) {
+  return status === resolveStatus;
+}
+
+function isReject(status) {
+  return status === rejectStatus;
 }

@@ -6,7 +6,11 @@ import type {
   RefAttributes,
 } from "react";
 
-export type Status = "pending" | "resolve" | "reject";
+declare const pendingStatus: unique symbol;
+declare const resolveStatus: unique symbol;
+declare const rejectStatus: unique symbol;
+
+export type Status = typeof pendingStatus | typeof resolveStatus | typeof rejectStatus;
 
 export interface BaseResolveData<T, E = any> {
   first: boolean;
@@ -42,10 +46,6 @@ export type AwaitWatchProps<T, Deps, U = any, E = any> = BaseAwaitProps<T, U, E>
   children: (resolveData: Omit<ResolveData<T, U, E>, "placeholder"> & { watchOptions: WatchOptions; }) => ReactElement;
 };
 
-export type AwaitWatchArrayProps<T, Deps = any[], U = any, E = any> = Omit<AwaitWatchProps<T, Deps, U, E>, "compare">;
-
-export type AwaitWatchObjectProps<T, Deps = Record<string, any>, U = any, E = any> = Omit<AwaitWatchProps<T, Deps, U, E>, "compare">;
-
 export interface AwaitListProps {
   order?: "forwards" | "backwards" | "together";
   tail?: "collapsed";
@@ -63,7 +63,7 @@ export interface AwaitViewProps {
 }
 
 export type AsyncProps<P = Record<string, any>, U = any, E = any> = BaseAwaitProps<ReactElement, U, E> & {
-  element: ReactElement;
+  wrap: ReactElement;
   compare?: (newProps: P, oldProps: P) => boolean;
   children: (resolveData: ResolveData<ReactElement, U, E> & { watchOptions: WatchOptions; }) => ReactElement;
 };
@@ -116,9 +116,9 @@ export declare function Await<T = any, U = any, E = any>(props: AwaitProps<T, U,
 
 export declare function AwaitWatch<T = any, Deps = any, U = any, E = any>(props: AwaitWatchProps<T, Deps, U, E>): ReactElement;
 
-export declare function AwaitWatchArray<T = any, Deps = any[], U = any, E = any>(props: AwaitWatchArrayProps<T, Deps, U, E>): ReactElement;
+export declare function AwaitWatchArray<T = any, Deps = any[], U = any, E = any>(props: AwaitWatchProps<T, Deps, U, E>): ReactElement;
 
-export declare function AwaitWatchObject<T = any, Deps = Record<string, any>, U = any, E = any>(props: AwaitWatchObjectProps<T, Deps, U, E>): ReactElement;
+export declare function AwaitWatchObject<T = any, Deps = Record<string, any>, U = any, E = any>(props: AwaitWatchProps<T, Deps, U, E>): ReactElement;
 
 export declare function AwaitList(props: AwaitListProps): ReactElement;
 

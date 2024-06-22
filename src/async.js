@@ -30,7 +30,7 @@ const GenerateResolveContext = createContext(defaultGenerateResolve);
 
 const Async = forwardRef(function Async(
   {
-    element,
+    wrap,
     init,
     children,
     compare = defaultCompareObject,
@@ -51,23 +51,23 @@ const Async = forwardRef(function Async(
   const generateResolve = useContext(GenerateResolveContext);
   const [watchOptions, isUpdate, isWatching] = useWatchOptions();
   useImperativeHandle(ref, () => watchOptions, []);
-  if (!isValidElement(element) || typeof element.type !== "function")
+  if (!isValidElement(wrap) || typeof wrap.type !== "function")
     return;
   if (first.current) {
     first.current = false;
     if (!jumpFirst)
-      cacheResolve.current = generateResolve(element, watchOptions);
+      cacheResolve.current = generateResolve(wrap, watchOptions);
   } else {
     if (
       isWatching.current &&
-      (isUpdate.current || element.type !== cacheType.current || compare(element.props, cacheProps.current))
+      (isUpdate.current || wrap.type !== cacheType.current || compare(wrap.props, cacheProps.current))
     ) {
       isUpdate.current = false;
-      cacheResolve.current = generateResolve(element, watchOptions);
+      cacheResolve.current = generateResolve(wrap, watchOptions);
     }
   }
-  cacheType.current = element.type;
-  cacheProps.current = element.props;
+  cacheType.current = wrap.type;
+  cacheProps.current = wrap.props;
   return createElement(Await, {
     resolve: cacheResolve.current,
     init,
@@ -87,8 +87,8 @@ function AsyncView({root, rootIsParent, rootMargin, threshold, children, onInter
   const [valid] = useState(() => {
     return isValidElement(children) &&
       children.type === Async &&
-      isValidElement(children.props.element) &&
-      typeof children.props.element.type === "function";
+      isValidElement(children.props.wrap) &&
+      typeof children.props.wrap.type === "function";
   });
   const [[generateResolve, handle]] = useState(() => {
     const {promise, resolve} = withResolvers();
@@ -145,7 +145,6 @@ function defineAsyncComponent(
     const cacheResolve = useRef(null);
     const cacheProps = useRef(null);
     const first = useRef(true);
-    const el = useRef(null);
     const [watchOptions, isUpdate, isWatching] = useWatchOptions();
     const [initValue] = useState(() => init(props, watchOptions));
     useImperativeHandle(ref, () => watchOptions, []);
@@ -160,7 +159,7 @@ function defineAsyncComponent(
       }
     }
     cacheProps.current = props;
-    return el.current = createElement(Await, {
+    return createElement(Await, {
       resolve: cacheResolve.current,
       init: initValue,
       delay,
