@@ -60,7 +60,7 @@ const Async = forwardRef(function Async(
   } else {
     if (
       isWatching.current &&
-      (isUpdate.current || wrap.type !== cacheType.current || compare(wrap.props, cacheProps.current))
+      (isUpdate.current || wrap.type !== cacheType.current || (compare && compare(wrap.props, cacheProps.current)))
     ) {
       isUpdate.current = false;
       cacheResolve.current = generateResolve(wrap, watchOptions);
@@ -126,6 +126,9 @@ function useAsyncValue() {
 function defaultInit() {
 }
 
+function defaultUseAction() {
+}
+
 function defineAsyncComponent(
   {
     name = "AsyncComponent",
@@ -137,6 +140,7 @@ function defineAsyncComponent(
     onEnd,
     onError,
     onComputed,
+    useAction = defaultUseAction,
     loader,
     Component,
   }
@@ -147,15 +151,16 @@ function defineAsyncComponent(
     const first = useRef(true);
     const [watchOptions, isUpdate, isWatching] = useWatchOptions();
     const [initValue] = useState(() => init(props, watchOptions));
+    const action = useAction(props, watchOptions);
     useImperativeHandle(ref, () => watchOptions, []);
     if (first.current) {
       first.current = false;
       if (!jumpFirst)
-        cacheResolve.current = loader(props, watchOptions);
+        cacheResolve.current = loader(props, {action, watchOptions});
     } else {
-      if (isWatching.current && (isUpdate.current || compare(props, cacheProps.current))) {
+      if (isWatching.current && (isUpdate.current || (compare && compare(props, cacheProps.current)))) {
         isUpdate.current = false;
-        cacheResolve.current = loader(props, watchOptions);
+        cacheResolve.current = loader(props, {action, watchOptions});
       }
     }
     cacheProps.current = props;
@@ -171,7 +176,7 @@ function defineAsyncComponent(
     }, ({first, status, value, error, computed}) => {
       return createElement(
         AsyncValueContext.Provider,
-        {value: {first, status, value, error, computed, watchOptions}},
+        {value: {first, status, value, error, computed, action, watchOptions}},
         createElement(Component, props)
       );
     });

@@ -148,7 +148,7 @@ const AwaitWatch = forwardRef(function AwaitWatch(
     if (!jumpFirst)
       cacheResolve.current = handle(deps, cacheDeps.current);
   } else {
-    if (isWatching.current && (isUpdate.current || compare(deps, cacheDeps.current))) {
+    if (isWatching.current && (isUpdate.current || (compare && compare(deps, cacheDeps.current)))) {
       isUpdate.current = false;
       cacheResolve.current = handle(deps, cacheDeps.current);
     }

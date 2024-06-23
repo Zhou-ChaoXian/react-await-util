@@ -42,7 +42,7 @@ export type AwaitProps<T, U = any, E = any> = BaseAwaitProps<T, U, E> & {
 export type AwaitWatchProps<T, Deps, U = any, E = any> = BaseAwaitProps<T, U, E> & {
   deps?: Deps;
   handle: (newDeps?: Deps, oldDeps?: Deps) => Promise<T>;
-  compare?: (newDeps: Deps, oldDeps: Deps) => boolean;
+  compare?: ((newDeps: Deps, oldDeps: Deps) => boolean) | false;
   children: (resolveData: Omit<ResolveData<T, U, E>, "placeholder"> & { watchOptions: WatchOptions; }) => ReactElement;
 };
 
@@ -64,7 +64,7 @@ export interface AwaitViewProps {
 
 export type AsyncProps<P = Record<string, any>, U = any, E = any> = BaseAwaitProps<ReactElement, U, E> & {
   wrap: ReactElement;
-  compare?: (newProps: P, oldProps: P) => boolean;
+  compare?: ((newProps: P, oldProps: P) => boolean) | false;
   children: (resolveData: ResolveData<ReactElement, U, E> & { watchOptions: WatchOptions; }) => ReactElement;
 };
 
@@ -76,17 +76,18 @@ export interface WatchOptions {
   get isWatching(): boolean;
 }
 
-export interface AsyncComponentOptions<T, P = Record<string, any>, U = any, E = any> {
+export interface AsyncComponentOptions<P = Record<string, any>, T = any, A = any, U = any, E = any> {
   name?: string;
   init?: (props: P, watchOptions: WatchOptions) => T;
-  compare?: (newProps: P, oldProps: P) => boolean;
+  compare?: ((newProps: P, oldProps: P) => boolean) | false;
   delay?: number;
   jumpFirst?: boolean;
   onStart?: (first: boolean) => void;
   onEnd?: (first: boolean) => void;
   onError?: (error: E) => void;
   onComputed?: (resolveData: BaseResolveData<T, E>) => U;
-  loader: (props: P, watchOptions: WatchOptions) => Promise<T>;
+  useAction?: (props: P, watchOptions: WatchOptions) => A;
+  loader: (props: P, options: { action: A; watchOptions: WatchOptions; }) => Promise<T>;
   Component: (props: P) => ReactElement;
 }
 
@@ -128,9 +129,9 @@ export declare function Async<P = Record<string, any>, U = any, E = any>(props: 
 
 export declare function AsyncView(props: AwaitViewProps): ReactElement;
 
-export declare function defineAsyncComponent<T = any, Props = Record<string, any>, U = any, E = any>(options: AsyncComponentOptions<T, Props, U, E>): ForwardRefExoticComponent<PropsWithoutRef<Props> & RefAttributes<WatchOptions>>;
+export declare function defineAsyncComponent<Props = Record<string, any>, T = any, A = any, U = any, E = any>(options: AsyncComponentOptions<Props, T, A, U, E>): ForwardRefExoticComponent<PropsWithoutRef<Props> & RefAttributes<WatchOptions>>;
 
-export declare function useAsyncValue<T = any, U = any, E = any>(): (Omit<ResolveData<T, U, E>, "placeholder"> & { watchOptions: WatchOptions; });
+export declare function useAsyncValue<T = any, A = any, U = any, E = any>(): (Omit<ResolveData<T, U, E>, "placeholder"> & { action: A; watchOptions: WatchOptions; });
 
 export declare function Action<S = any, O = any>(props: ActionProps<S, O>): ReactElement;
 

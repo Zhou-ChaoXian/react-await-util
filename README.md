@@ -99,19 +99,19 @@ async function request() {
 
 ***? 表示可选属性***
 
-| `props`     |                 `type`                  | `description`                  |
-|:------------|:---------------------------------------:|:-------------------------------|
-| deps?       |                   any                   | 依赖                             |
-| compare?    | (newDeps: any, oldDeps: any) => boolean | 对比函数，默认 === 对比                 |
-| handle      | (newDeps: any, oldDeps: any) => Promise | 生成 Promise                     |
-| init?       |                   any                   | 初始值                            |
-| delay?      |                 number                  | 延迟，默认 300 ms，Promise 完成快屏幕会闪烁  |
-| jumpFirst?  |                 boolean                 | 跳过首次请求，一般和 init 配合             |
-| onStart?    |        (first: boolean) => void         | Promise 开始时执行，first 表示是否是第一次执行 |
-| onEnd?      |        (first: boolean) => void         | Promise 结束时执行，无论是否成功           |
-| onError?    |          (error: any) => void           | Promise 出错时执行                  |
-| onComputed? |             OnComputed (同上)             | 对结果先处理                         |
-| children    |               ChildrenFn                | 子元素是函数，给 Promise 提供一个抽象的结果     |
+| `props`     |                          `type`                          | `description`                  |
+|:------------|:--------------------------------------------------------:|:-------------------------------|
+| deps?       |                           any                            | 依赖                             |
+| compare?    | ((newDeps: any, oldDeps: any) => boolean) &#124; boolean | 对比函数，默认 === 对比                 |
+| handle      |         (newDeps: any, oldDeps: any) => Promise          | 生成 Promise                     |
+| init?       |                           any                            | 初始值                            |
+| delay?      |                          number                          | 延迟，默认 300 ms，Promise 完成快屏幕会闪烁  |
+| jumpFirst?  |                         boolean                          | 跳过首次请求，一般和 init 配合             |
+| onStart?    |                 (first: boolean) => void                 | Promise 开始时执行，first 表示是否是第一次执行 |
+| onEnd?      |                 (first: boolean) => void                 | Promise 结束时执行，无论是否成功           |
+| onError?    |                   (error: any) => void                   | Promise 出错时执行                  |
+| onComputed? |                     OnComputed (同上)                      | 对结果先处理                         |
+| children    |                        ChildrenFn                        | 子元素是函数，给 Promise 提供一个抽象的结果     |
 
 ```ts
 import type {ReactElement} from "react";
@@ -284,18 +284,18 @@ function Foo() {
 
 ***? 表示可选属性***
 
-| `props`     |                  `type`                   | `description`                  |
-|:------------|:-----------------------------------------:|:-------------------------------|
-| wrap        |               ReactElement                | 要包装的组件元素                       |
-| compare?    | (newProps: any, oldProps: any) => boolean | 对比函数，默认 wrap 的 props           |
-| init?       |                    any                    | 初始值                            |
-| delay?      |                  number                   | 延迟，默认 300 ms，Promise 完成快屏幕会闪烁  |
-| jumpFirst?  |                  boolean                  | 跳过首次请求，一般和 init 配合             |
-| onStart?    |         (first: boolean) => void          | Promise 开始时执行，first 表示是否是第一次执行 |
-| onEnd?      |         (first: boolean) => void          | Promise 结束时执行，无论是否成功           |
-| onError?    |           (error: any) => void            | Promise 出错时执行                  |
-| onComputed? |                OnComputed                 | 对结果先处理                         |
-| children    |                ChildrenFn                 | 子元素是函数，给 Promise 提供一个抽象的结果     |
+| `props`     |                           `type`                           | `description`                  |
+|:------------|:----------------------------------------------------------:|:-------------------------------|
+| wrap        |                        ReactElement                        | 要包装的组件元素                       |
+| compare?    | ((newProps: any, oldProps: any) => boolean) &#124; boolean | 对比函数，默认 wrap 的 props           |
+| init?       |                            any                             | 初始值                            |
+| delay?      |                           number                           | 延迟，默认 300 ms，Promise 完成快屏幕会闪烁  |
+| jumpFirst?  |                          boolean                           | 跳过首次请求，一般和 init 配合             |
+| onStart?    |                  (first: boolean) => void                  | Promise 开始时执行，first 表示是否是第一次执行 |
+| onEnd?      |                  (first: boolean) => void                  | Promise 结束时执行，无论是否成功           |
+| onError?    |                    (error: any) => void                    | Promise 出错时执行                  |
+| onComputed? |                         OnComputed                         | 对结果先处理                         |
+| children    |                         ChildrenFn                         | 子元素是函数，给 Promise 提供一个抽象的结果     |
 
 ***示例***
 
@@ -432,19 +432,34 @@ async function Bar() {
 
 ***? 表示可选属性***
 
-| `options`   |                       `type`                        | `description`                  |
-|:------------|:---------------------------------------------------:|:-------------------------------|
-| name?       |                       string                        | 组件名                            |
-| init?       |                 (props: any) => any                 | 初始化值                           |
-| compare?    |      (newProps: any, oldProps: any) => boolean      | 对比函数                           |
-| delay?      |                       number                        | 延迟，防止闪烁                        |
-| jumpFirst?  |                       boolean                       | 跳过首次请求                         |
-| onStart?    |              (first: boolean) => void               | Promise 开始时执行，first 表示是否是第一次执行 |
-| onEnd?      |              (first: boolean) => void               | Promise 结束时执行，无论是否成功           |
-| onError?    |                (error: any) => void                 | Promise 出错时执行                  |
-| onComputed? |                     OnComputed                      | 对结果先处理                         |
-| loader      | (props: any, watchOptions: WatchOptions) => Promise | loader，生成 Promise              |
-| Component   |            (props: any) => ReactElement             | 组件                             |
+| `options`   |                                     `type`                                     | `description`                  |
+|:------------|:------------------------------------------------------------------------------:|:-------------------------------|
+| name?       |                                     string                                     | 组件名                            |
+| init?       |                              (props: any) => any                               | 初始化值                           |
+| compare?    |           ((newProps: any, oldProps: any) => boolean) &#124; boolean           | 对比函数                           |
+| delay?      |                                     number                                     | 延迟，防止闪烁                        |
+| jumpFirst?  |                                    boolean                                     | 跳过首次请求                         |
+| onStart?    |                            (first: boolean) => void                            | Promise 开始时执行，first 表示是否是第一次执行 |
+| onEnd?      |                            (first: boolean) => void                            | Promise 结束时执行，无论是否成功           |
+| onError?    |                              (error: any) => void                              | Promise 出错时执行                  |
+| onComputed? |                                   OnComputed                                   | 对结果先处理                         |
+| useAction?  |                (props: any, watchOptions: WatchOptions) => any                 | 组件的状态和行为 (hook)                |
+| loader      | (props: any, options: { action: any; watchOptions: WatchOptions; }) => Promise | loader，生成 Promise              |
+| Component   |                          (props: any) => ReactElement                          | 组件                             |
+
+> 需要和 `useAsyncValue` 这个 `hook` 配合使用
+
+```ts
+interface UseAsyncValue {
+  first: boolean;
+  status: typeof pendingStatus | typeof resolveStatus | typeof rejectStatus;
+  value: any;
+  error: any;
+  computed: any;
+  action: any;
+  watchOptions: WatchOptions;
+}
+```
 
 ***示例***
 
