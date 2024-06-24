@@ -79,7 +79,7 @@ export interface WatchOptions {
 export interface AsyncComponentOptions<P = Record<string, any>, T = any, A = any, U = any, E = any> {
   name?: string;
   init?: (props: P, watchOptions: WatchOptions) => T;
-  compare?: ((newProps: P, oldProps: P) => boolean) | false;
+  compare?: ((newProps: P, oldProps: P, newAction: A, oldAction: A) => boolean) | false;
   delay?: number;
   jumpFirst?: boolean;
   onStart?: (first: boolean) => void;

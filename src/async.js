@@ -152,18 +152,23 @@ function defineAsyncComponent(
     const [watchOptions, isUpdate, isWatching] = useWatchOptions();
     const [initValue] = useState(() => init(props, watchOptions));
     const action = useAction(props, watchOptions);
+    const cacheAction = useRef(undefined);
     useImperativeHandle(ref, () => watchOptions, []);
     if (first.current) {
       first.current = false;
       if (!jumpFirst)
         cacheResolve.current = loader(props, {action, watchOptions});
     } else {
-      if (isWatching.current && (isUpdate.current || (compare && compare(props, cacheProps.current)))) {
+      if (
+        isWatching.current &&
+        (isUpdate.current || (compare && compare(props, cacheProps.current, action, cacheAction.current)))
+      ) {
         isUpdate.current = false;
         cacheResolve.current = loader(props, {action, watchOptions});
       }
     }
     cacheProps.current = props;
+    cacheAction.current = action;
     return createElement(Await, {
       resolve: cacheResolve.current,
       init: initValue,

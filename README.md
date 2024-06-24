@@ -432,20 +432,20 @@ async function Bar() {
 
 ***? 表示可选属性***
 
-| `options`   |                                     `type`                                     | `description`                  |
-|:------------|:------------------------------------------------------------------------------:|:-------------------------------|
-| name?       |                                     string                                     | 组件名                            |
-| init?       |                              (props: any) => any                               | 初始化值                           |
-| compare?    |           ((newProps: any, oldProps: any) => boolean) &#124; boolean           | 对比函数                           |
-| delay?      |                                     number                                     | 延迟，防止闪烁                        |
-| jumpFirst?  |                                    boolean                                     | 跳过首次请求                         |
-| onStart?    |                            (first: boolean) => void                            | Promise 开始时执行，first 表示是否是第一次执行 |
-| onEnd?      |                            (first: boolean) => void                            | Promise 结束时执行，无论是否成功           |
-| onError?    |                              (error: any) => void                              | Promise 出错时执行                  |
-| onComputed? |                                   OnComputed                                   | 对结果先处理                         |
-| useAction?  |                (props: any, watchOptions: WatchOptions) => any                 | 组件的状态和行为 (hook)                |
-| loader      | (props: any, options: { action: any; watchOptions: WatchOptions; }) => Promise | loader，生成 Promise              |
-| Component   |                          (props: any) => ReactElement                          | 组件                             |
+| `options`   |                                           `type`                                           | `description`                  |
+|:------------|:------------------------------------------------------------------------------------------:|:-------------------------------|
+| name?       |                                           string                                           | 组件名                            |
+| init?       |                                    (props: any) => any                                     | 初始化值                           |
+| compare?    | ((newProps: any, oldProps: any, newAction: any, oldAction: any) => boolean) &#124; boolean | 对比函数，默认只对比 props               |
+| delay?      |                                           number                                           | 延迟，防止闪烁                        |
+| jumpFirst?  |                                          boolean                                           | 跳过首次请求                         |
+| onStart?    |                                  (first: boolean) => void                                  | Promise 开始时执行，first 表示是否是第一次执行 |
+| onEnd?      |                                  (first: boolean) => void                                  | Promise 结束时执行，无论是否成功           |
+| onError?    |                                    (error: any) => void                                    | Promise 出错时执行                  |
+| onComputed? |                                         OnComputed                                         | 对结果先处理                         |
+| useAction?  |                      (props: any, watchOptions: WatchOptions) => any                       | 组件的状态和行为 (hook)                |
+| loader      |       (props: any, options: { action: any; watchOptions: WatchOptions; }) => Promise       | loader，生成 Promise              |
+| Component   |                                (props: any) => ReactElement                                | 组件                             |
 
 > 需要和 `useAsyncValue` 这个 `hook` 配合使用
 
