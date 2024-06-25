@@ -7,16 +7,18 @@ import {
   Fragment,
   isValidElement,
   useImperativeHandle,
-  useRef,
+  useMemo,
   useState,
 } from "react";
-import {useForceUpdate, useWatchOptions, useView} from "./hook.js";
 import {
-  _data,
-  _error,
+  useAwait,
+  useAwaitWatch,
+  useForceUpdate,
+  useView,
+} from "./hook.js";
+import {
   _tracked,
   trackedPromise,
-  trackedResolve,
   defaultCompare,
   defaultCompareObject,
   defaultCompareArray,
@@ -31,14 +33,7 @@ export {
   AwaitWatchArray,
   AwaitList,
   AwaitView,
-  isPending,
-  isResolve,
-  isReject,
 };
-
-const pendingStatus = Symbol("pending");
-const resolveStatus = Symbol("resolve");
-const rejectStatus = Symbol("reject");
 
 function Await(
   {
@@ -54,72 +49,19 @@ function Await(
     children,
   }
 ) {
-  const forceUpdate = useForceUpdate();
-  const first = useRef(true);
-  const cancelMap = useRef(new Map()).current;
-  const cacheResolve = useRef(null);
-  const updateFlag = useRef(false);
-  const status = useRef(pendingStatus);
-  const resolveValue = useRef(init);
-  const computed = useRef(null);
-  if (first.current && jumpFirst) {
-    first.current = false;
-    resolve = trackedResolve(init);
-  }
+  const resolveData = useAwait({
+    resolve,
+    init,
+    delay,
+    jumpFirst,
+    onStart,
+    onEnd,
+    onError,
+  });
+  const computed = useMemo(() => onComputed?.(resolveData), [resolveData]);
   if (resolve === noRender)
     return;
-  if (resolve instanceof Promise && (cacheResolve.current !== resolve || updateFlag.current)) {
-    updateFlag.current = false;
-    if (!Reflect.has(resolve, _tracked)) {
-      resolve = Object.defineProperty(resolve, _tracked, {value: true});
-      cancelMap.get(cacheResolve.current)?.();
-      cacheResolve.current = resolve;
-      let flag = true;
-      cancelMap.set(resolve, () => {
-        flag = false;
-        cancelMap.delete(resolve);
-      });
-      status.current = pendingStatus;
-      onStart?.(first.current);
-      resolve.then(
-        v => Object.defineProperty(resolve, _data, {value: v}),
-        e => Object.defineProperty(resolve, _error, {value: e})
-      ).finally(() => {
-        setTimeout(() => {
-          if (flag) {
-            cancelMap.delete(resolve);
-            onEnd?.(first.current);
-            first.current = false;
-            updateFlag.current = true;
-            forceUpdate();
-          }
-        }, delay);
-      });
-    } else {
-      cacheResolve.current = resolve;
-      if (Reflect.has(resolve, _data)) {
-        status.current = resolveStatus;
-        resolveValue.current = Reflect.get(resolve, _data);
-      } else {
-        status.current = rejectStatus;
-        onError?.(Reflect.get(resolve, _error));
-      }
-    }
-    computed.current = onComputed?.({
-      first: first.current,
-      status: status.current,
-      value: resolveValue.current,
-      error: Reflect.get(resolve, _error),
-    });
-  }
-  return children({
-    first: first.current,
-    status: status.current,
-    value: resolveValue.current,
-    error: resolve && Reflect.get(resolve, _error),
-    computed: computed.current,
-    placeholder,
-  });
+  return children({...resolveData, computed, placeholder});
 }
 
 const AwaitWatch = forwardRef(function AwaitWatch(
@@ -138,34 +80,20 @@ const AwaitWatch = forwardRef(function AwaitWatch(
   },
   ref
 ) {
-  const cacheResolve = useRef(null);
-  const cacheDeps = useRef(null);
-  const first = useRef(true);
-  const [watchOptions, isUpdate, isWatching] = useWatchOptions();
-  useImperativeHandle(ref, () => watchOptions, []);
-  if (first.current) {
-    first.current = false;
-    if (!jumpFirst)
-      cacheResolve.current = handle(deps, cacheDeps.current);
-  } else {
-    if (isWatching.current && (isUpdate.current || (compare && compare(deps, cacheDeps.current)))) {
-      isUpdate.current = false;
-      cacheResolve.current = handle(deps, cacheDeps.current);
-    }
-  }
-  cacheDeps.current = deps;
-  return createElement(Await, {
-    resolve: cacheResolve.current,
+  const [resolveData, watchOptions] = useAwaitWatch({
+    deps,
+    compare,
+    handle,
     init,
     delay,
     jumpFirst,
     onStart,
     onEnd,
     onError,
-    onComputed,
-  }, ({first, status, value, error, computed}) => {
-    return children({first, status, value, error, computed, watchOptions});
   });
+  const computed = useMemo(() => onComputed?.(resolveData), [resolveData]);
+  useImperativeHandle(ref, () => watchOptions, []);
+  return children({...resolveData, computed, watchOptions});
 });
 
 const AwaitWatchObject = forwardRef(function AwaitWatchObject(
@@ -184,7 +112,7 @@ const AwaitWatchObject = forwardRef(function AwaitWatchObject(
   },
   ref
 ) {
-  return createElement(AwaitWatch, {
+  const [resolveData, watchOptions] = useAwaitWatch({
     deps,
     compare,
     handle,
@@ -194,10 +122,10 @@ const AwaitWatchObject = forwardRef(function AwaitWatchObject(
     onStart,
     onEnd,
     onError,
-    onComputed,
-    children,
-    ref,
   });
+  const computed = useMemo(() => onComputed?.(resolveData), [resolveData]);
+  useImperativeHandle(ref, () => watchOptions, []);
+  return children({...resolveData, computed, watchOptions});
 });
 
 const AwaitWatchArray = forwardRef(function AwaitWatchArray(
@@ -216,7 +144,7 @@ const AwaitWatchArray = forwardRef(function AwaitWatchArray(
   },
   ref
 ) {
-  return createElement(AwaitWatch, {
+  const [resolveData, watchOptions] = useAwaitWatch({
     deps,
     compare,
     handle,
@@ -226,10 +154,10 @@ const AwaitWatchArray = forwardRef(function AwaitWatchArray(
     onStart,
     onEnd,
     onError,
-    onComputed,
-    children,
-    ref,
   });
+  const computed = useMemo(() => onComputed?.(resolveData), [resolveData]);
+  useImperativeHandle(ref, () => watchOptions, []);
+  return children({...resolveData, computed, watchOptions});
 });
 
 const orders = new Set(["forwards", "backwards", "together"]);
@@ -329,16 +257,4 @@ function AwaitView(
     return flag.current ?
       children :
       cloneElement(children, {resolve, placeholder});
-}
-
-function isPending(status) {
-  return status === pendingStatus;
-}
-
-function isResolve(status) {
-  return status === resolveStatus;
-}
-
-function isReject(status) {
-  return status === rejectStatus;
 }

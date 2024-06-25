@@ -4,10 +4,10 @@
 
 ### 目录
 
-1. [`Await`](#await)
-2. [`AwaitWatch`](#awaitwatch)
-3. [`AwaitWatchObject`](#awaitwatchobject)
-4. [`AwaitWatchArray`](#awaitwatcharray)
+1. [`useAwait`](#useawait)
+2. [`Await`](#await)
+3. [`useAwaitWatch`](#useawaitwatch)
+4. [`AwaitWatch`](#awaitwatch)
 5. [`AwaitList`](#awaitlist)
 6. [`AwaitView`](#awaitview)
 7. [`Async`](#async)
@@ -16,9 +16,69 @@
 10. [`Action`](#action)
 11. [`Host` `Tmpl` `Slotted`](#插槽组件)
 
-### Await
+### useAwait
 
-> 处理 `promise`，所有组件都是基于 `Await` 组件实现
+***? 表示可选属性***
+
+| `options`  |          `type`          | `description`                  |
+|:-----------|:------------------------:|:-------------------------------|
+| resolve?   |         Promise          | 要处理的 Promise                   |
+| init?      |           any            | 初始值                            |
+| delay?     |          number          | 延迟，默认 300 ms，Promise 完成快屏幕会闪烁  |
+| jumpFirst? |         boolean          | 跳过首次请求，一般和 init 配合             |
+| onStart?   | (first: boolean) => void | Promise 开始时执行，first 表示是否是第一次执行 |
+| onEnd?     | (first: boolean) => void | Promise 结束时执行，无论是否成功           |
+| onError?   |   (error: any) => void   | Promise 出错时执行                  |
+
+```ts
+declare const pendingStatus: unique symbol;
+declare const resolveStatus: unique symbol;
+declare const rejectStatus: unique symbol;
+
+// 返回值
+interface ResolveData {
+  first: boolean;  // 是否是第一次执行，一般用于初始化判断，适用骨架屏
+  status: typeof pendingStatus | typeof resolveStatus | typeof rejectStatus;  // 当前状态，一般用于初始化后请求，判断状态，展示 loading 效果
+  value: any;  // Promise 结果，会保留最后一次正确的结果，防止请求出错没有数据，页面空了
+  error: any;  // Promise 出错
+}
+```
+
+***示例***
+
+```jsx
+import {useState} from "react";
+import {useAwait, isPending} from "react-await-util";
+import {Skeleton, Spin, Button, Flex} from "antd";
+
+async function request(count) {
+  return "hello" + count;
+}
+
+function Foo() {
+  const [count, setCount] = useState(0);
+  const [resolve, setResolve] = useState(() => request(count));
+  const add = () => {
+    const c = count + 1;
+    setCount(c);
+    setResolve(request(c));
+  };
+  const {first, status, value} = useAwait({resolve});
+  return (
+    <Skeleton loading={first}>
+      <Spin spinning={!first && isPending(status)}>
+        <Flex vertical justify="center" align="center" gap="middle">
+          <h1>{count}</h1>
+          <Button onClick={add}>add</Button>
+          <h1>{value}</h1>
+        </Flex>
+      </Spin>
+    </Skeleton>
+  );
+}
+```
+
+### Await
 
 ***? 表示可选属性***
 
@@ -37,18 +97,7 @@
 ```ts
 import type {ReactElement, RefObject} from "react";
 
-declare const pendingStatus: unique symbol;
-declare const resolveStatus: unique symbol;
-declare const rejectStatus: unique symbol;
-
-interface ResolveData {
-  first: boolean;  // 是否是第一次执行，一般用于初始化判断，适用骨架屏
-  status: typeof pendingStatus | typeof resolveStatus | typeof rejectStatus;  // 当前状态，一般用于初始化后请求，判断状态，展示 loading 效果
-  value: any;  // Promise 结果，会保留最后一次正确的结果，防止请求出错没有数据，页面空了
-  error: any;  // Promise 出错
-}
-
-type OnComputed = (resolveData: ResolveData) => any;
+type OnComputed = (resolveData: ResolveData) => any;  // ResolveData 同上，返回值
 
 type Options = ResolveData & {
   computed: any;  // onComputed 处理结果
@@ -92,10 +141,72 @@ async function request() {
 }
 ```
 
-### AwaitWatch
+### useAwaitWatch
 
-> 封装 `Await` 组件，将 `resolve` 变成 `deps` (依赖) `handle` (处理函数) `compare` (对比函数) 三个属性  
-> 对比依赖，依赖发生变化，处理函数生成新的 `resolve`
+***? 表示可选属性***
+
+| `options`  |                          `type`                          | `description`                  |
+|:-----------|:--------------------------------------------------------:|:-------------------------------|
+| deps?      |                           any                            | 依赖                             |
+| compare?   | ((newDeps: any, oldDeps: any) => boolean) &#124; boolean | 对比函数，默认 === 对比                 |
+| handle     |         (newDeps: any, oldDeps: any) => Promise          | 生成 Promise                     |
+| init?      |                           any                            | 初始值                            |
+| delay?     |                          number                          | 延迟，默认 300 ms，Promise 完成快屏幕会闪烁  |
+| jumpFirst? |                         boolean                          | 跳过首次请求，一般和 init 配合             |
+| onStart?   |                 (first: boolean) => void                 | Promise 开始时执行，first 表示是否是第一次执行 |
+| onEnd?     |                 (first: boolean) => void                 | Promise 结束时执行，无论是否成功           |
+| onError?   |                   (error: any) => void                   | Promise 出错时执行                  |
+
+```ts
+interface WatchOptions {
+  update: () => void;  // 强制更新
+  unWatch: () => void;  // 取消观察，依赖发生变化，不重新请求
+  reWatch: () => void;  // 恢复观察
+
+  get isWatching(): boolean;  // 是否正在观察
+}
+
+type Return = [ResolveData, WatchOptions];  // 返回值是个元组
+```
+
+***示例***
+
+```jsx
+import {useState} from "react";
+import {useAwaitWatch, isPending} from "react-await-util";
+import {Skeleton, Spin, Button, Flex} from "antd";
+
+function Foo() {
+  const [count, setCount] = useState(0);
+  const add = () => {
+    setCount(count + 1);
+  };
+  const [{first, status, value}, watchOptions] = useAwaitWatch({
+    deps: count,
+    handle: async () => {
+      return "hello" + count;
+    },
+  });
+  return (
+    <Skeleton loading={first}>
+      <Spin spinning={!first && isPending(status)}>
+        <Flex vertical justify="center" align="center" gap="middle">
+          <h1>{count}</h1>
+          <Button onClick={add}>add</Button>
+          <h1>{value}</h1>
+          <Flex justify="center" gap="middle">
+            <Button onClick={watchOptions.update}>update</Button>
+            <Button onClick={watchOptions.unWatch} disabled={!watchOptions.isWatching}>unWatch</Button>
+            <Button onClick={watchOptions.reWatch} disabled={watchOptions.isWatching}>reWatch</Button>
+          </Flex>
+        </Flex>
+      </Spin>
+    </Skeleton>
+  );
+}
+```
+
+### AwaitWatch
 
 ***? 表示可选属性***
 
@@ -116,21 +227,13 @@ async function request() {
 ```ts
 import type {ReactElement} from "react";
 
-interface WatchOptions {
-  update: () => void;  // 强制更新
-  unWatch: () => void;  // 取消观察，依赖发生变化，不重新请求
-  reWatch: () => void;  // 恢复观察
-
-  get isWatching(): boolean;  // 是否正在观察
-}
-
 interface ResolveData {
   first: boolean;
   status: typeof pendingStatus | typeof resolveStatus | typeof rejectStatus;
   value: any;
   error: any;
   computed: any;
-  watchOptions: WatchOptions;
+  watchOptions: WatchOptions;  // 同上
 }
 
 type ChildrenFn = (resolveData: ResolveData) => ReactElement;
@@ -173,13 +276,9 @@ async function request(count) {
 }
 ```
 
-### AwaitWatchObject
-
-> `AwaitWatch` 组件特例，对比两个***对象***
-
-### AwaitWatchArray
-
-> `AwaitWatch` 组件特例，对比两个***数组***
+> ***特例***  
+> `useAwaitWatchObject` 和 `AwaitWatchObject` ***依赖是对象***  
+> `useAwaitWatchArray` 和 `AwaitWatchArray` ***依赖是数组***
 
 ### AwaitList
 
@@ -324,15 +423,10 @@ function Foo() {
   );
 }
 
-async function Bar({count}, watchOptions) {
+async function Bar({count}) {
   await new Promise(resolve => setTimeout(resolve, 1000));
   return (
-    <>
-      <Typography.Text underline style={{fontSize: "2em"}}>{count}</Typography.Text>
-      <Flex justify="center">
-        <Button onClick={watchOptions.update}>update</Button>
-      </Flex>
-    </>
+    <Typography.Text underline style={{fontSize: "2em"}}>{count}</Typography.Text>
   );
 }
 ```
@@ -354,7 +448,7 @@ function Foo() {
   };
 
   return (
-    <Async wrap={<Bar count={count}/>}>{({first, status, value}) =>
+    <Async wrap={<Bar count={count}/>}>{({first, status, value, watchOptions}) =>
       <Skeleton loading={first}>
         <Spin spinning={!first && isPending(status)}>
           <Flex justify="center" align="center" vertical gap="middle">
@@ -364,13 +458,13 @@ function Foo() {
               <Tmpl>
                 <h1>count - {count}</h1>
               </Tmpl>
-              <Tmpl name="item">{({watchOptions}) =>
+              <Tmpl name="item">
                 <Flex justify="center" align="center" gap="middle">
                   <Button onClick={watchOptions.update} disabled={!watchOptions.isWatching}>update</Button>
                   <Button onClick={watchOptions.unWatch} disabled={!watchOptions.isWatching}>unWatch</Button>
                   <Button onClick={watchOptions.reWatch} disabled={watchOptions.isWatching}>reWatch</Button>
                 </Flex>
-              }</Tmpl>
+              </Tmpl>
             </Host>
           </Flex>
         </Spin>
@@ -379,13 +473,13 @@ function Foo() {
   );
 }
 
-async function Bar({count}, watchOptions) {
+async function Bar({count}) {
   await new Promise(resolve => setTimeout(resolve, 1000));
   return (
     <>
       <h1>hello - {count}</h1>
       <Slotted/>
-      <Slotted name="item" watchOptions={watchOptions}/>
+      <Slotted name="item"/>
     </>
   );
 }
@@ -444,7 +538,7 @@ async function Bar() {
 | onError?    |                                    (error: any) => void                                    | Promise 出错时执行                  |
 | onComputed? |                                         OnComputed                                         | 对结果先处理                         |
 | useAction?  |                      (props: any, watchOptions: WatchOptions) => any                       | 组件的状态和行为 (hook)                |
-| loader      |       (props: any, options: { action: any; watchOptions: WatchOptions; }) => Promise       | loader，生成 Promise              |
+| loader      |                            (props: any, action: any) => Promise                            | loader，生成 Promise              |
 | Component   |                                (props: any) => ReactElement                                | 组件                             |
 
 > 需要和 `useAsyncValue` 这个 `hook` 配合使用
