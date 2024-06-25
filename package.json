@@ -2,9 +2,9 @@
   "name": "react-await-util",
   "version": "1.0.0",
   "description": "处理组件中的 promise",
-  "main": "./src/index.js",
-  "module": "./src/index.js",
-  "types": "./src/index.d.ts",
+  "main": "./dist/index.js",
+  "module": "./dist/es/index.mjs",
+  "types": "./dist/index.d.ts",
   "scripts": {
     "start": "rollup -c"
   },
