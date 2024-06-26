@@ -242,15 +242,16 @@ function AwaitView(
     onIntersection = defaultIntersection
   }
 ) {
-  const [valid] = useState(() => {
-    return isValidElement(children) &&
-      children.type === Await &&
-      children.props.resolve instanceof Promise;
-  });
+  const [valid] = useState(() => isValidElement(children) && children.type === Await);
   const [[resolve, handle]] = useState(() => {
     const {promise, resolve} = withResolvers();
     const value = trackedPromise(children.props.resolve);
-    return [promise, () => valid && resolve(value)];
+    return [
+      promise,
+      () => {
+        valid && resolve(value);
+      }
+    ];
   });
   const {placeholder, flag} = useView(handle, root, rootIsParent, rootMargin, threshold, onIntersection);
   if (valid)

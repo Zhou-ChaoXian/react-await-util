@@ -78,7 +78,7 @@ const Async = forwardRef(function Async(
     onError,
   });
   const computed = useMemo(() => onComputed?.(resolveData), [resolveData]);
-  return children({...resolveData, computed, placeholder, watchOptions})
+  return children({...resolveData, computed, placeholder, watchOptions});
 });
 
 function AsyncView({root, rootIsParent, rootMargin, threshold, children, onIntersection = defaultIntersection}) {

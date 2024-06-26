@@ -96,7 +96,7 @@ export interface AwaitViewProps {
   rootMargin?: string;
   threshold?: number;
   onIntersection?: (entry: IntersectionObserverEntry) => boolean;
-  children: ReactElement;
+  children: ReactElement<AwaitProps<any>, typeof Await>;
 }
 
 export declare function AwaitView(props: AwaitViewProps): ReactElement;
@@ -116,7 +116,16 @@ export interface AsyncProps<P = Record<string, any>, U = any, E = any> {
 
 export declare function Async<P = Record<string, any>, U = any, E = any>(props: AsyncProps<P, U, E>): ReactElement;
 
-export declare function AsyncView(props: AwaitViewProps): ReactElement;
+export interface AsyncViewProps {
+  root?: RefObject<Element | Document | null>;
+  rootIsParent?: boolean;
+  rootMargin?: string;
+  threshold?: number;
+  onIntersection?: (entry: IntersectionObserverEntry) => boolean;
+  children: ReactElement<AsyncProps, typeof Async>;
+}
+
+export declare function AsyncView(props: AsyncViewProps): ReactElement;
 
 export interface AsyncComponentOptions<P = Record<string, any>, T = any, A = any, U = any, E = any> {
   name?: string;

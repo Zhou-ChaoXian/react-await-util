@@ -340,6 +340,8 @@ function Foo() {
 
 > 使用 `IntersectionObserver` api 实现，占位元素出现在视口中，在渲染结果，可以用于首屏优化
 
+> ***注意：*** `AwaitView` 子元素必须是 `Await`，并且 `jumpFirst` 不能为 `true`
+
 ***? 表示可选属性***
 
 | `props`         |                     `type`                     | `description`       |
@@ -488,6 +490,8 @@ async function Bar({count}) {
 ### AsyncView
 
 > 同 `AwaitView` 组件
+
+> ***注意：*** `AsyncView` 子元素必须是 `Async`，并且 `jumpFirst` 不能为 `true`
 
 ***示例***
 
