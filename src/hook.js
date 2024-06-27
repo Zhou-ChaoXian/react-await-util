@@ -131,11 +131,11 @@ function useAwaitWatch(
   if (first.current) {
     first.current = false;
     if (!jumpFirst)
-      cacheResolve.current = handle(deps, cacheDeps.current);
+      cacheResolve.current = handle(deps);
   } else {
     if (isWatching.current && (isUpdate.current || (compare && compare(deps, cacheDeps.current)))) {
       isUpdate.current = false;
-      cacheResolve.current = handle(deps, cacheDeps.current);
+      cacheResolve.current = handle(deps);
     }
   }
   cacheDeps.current = deps;

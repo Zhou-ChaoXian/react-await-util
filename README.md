@@ -148,8 +148,8 @@ async function request() {
 | `options`  |                         `type`                         | `description`                  |
 |:-----------|:------------------------------------------------------:|:-------------------------------|
 | deps?      |                          any                           | 依赖                             |
+| handle     |                 (deps: any) => Promise                 | 生成 Promise                     |                            |
 | compare?   | ((newDeps: any, oldDeps: any) => boolean) &#124; false | 对比函数，默认 === 对比                 |
-| handle     |        (newDeps: any, oldDeps: any) => Promise         | 生成 Promise                     |
 | init?      |                          any                           | 初始值                            |
 | delay?     |                         number                         | 延迟，默认 300 ms，Promise 完成快屏幕会闪烁  |
 | jumpFirst? |                        boolean                         | 跳过首次请求，一般和 init 配合             |
@@ -213,8 +213,8 @@ function Foo() {
 | `props`     |                         `type`                         | `description`                  |
 |:------------|:------------------------------------------------------:|:-------------------------------|
 | deps?       |                          any                           | 依赖                             |
+| handle      |                 (deps: any) => Promise                 | 生成 Promise                     |
 | compare?    | ((newDeps: any, oldDeps: any) => boolean) &#124; false | 对比函数，默认 === 对比                 |
-| handle      |        (newDeps: any, oldDeps: any) => Promise         | 生成 Promise                     |
 | init?       |                          any                           | 初始值                            |
 | delay?      |                         number                         | 延迟，默认 300 ms，Promise 完成快屏幕会闪烁  |
 | jumpFirst?  |                        boolean                         | 跳过首次请求，一般和 init 配合             |

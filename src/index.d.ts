@@ -54,7 +54,7 @@ export declare function Await<T = any, U = any, E = any>(props: AwaitProps<T, U,
 
 export interface AwaitWatchOptions<T, Deps, E = any> {
   deps?: Deps;
-  handle: (newDeps?: Deps, oldDeps?: Deps) => Promise<T>;
+  handle: (deps: Deps) => Promise<T>;
   compare?: ((newDeps: Deps, oldDeps: Deps) => boolean) | false;
   init?: T;
   delay?: number;
