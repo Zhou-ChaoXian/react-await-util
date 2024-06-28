@@ -6,15 +6,16 @@
 
 1. [`useAwait`](#useawait)
 2. [`Await`](#await)
-3. [`useAwaitWatch`](#useawaitwatch)
-4. [`AwaitWatch`](#awaitwatch)
-5. [`AwaitList`](#awaitlist)
-6. [`AwaitView`](#awaitview)
-7. [`Async`](#async)
-8. [`AsyncView`](#asyncview)
-9. [`defineAsyncComponent`](#defineasynccomponent)
-10. [`Action`](#action)
-11. [`Host` `Tmpl` `Slotted`](#插槽组件)
+3. [`useAwaitState`](#useawaitstate)
+4. [`useAwaitWatch`](#useawaitwatch)
+5. [`AwaitWatch`](#awaitwatch)
+6. [`AwaitList`](#awaitlist)
+7. [`AwaitView`](#awaitview)
+8. [`Async`](#async)
+9. [`AsyncView`](#asyncview)
+10. [`defineAsyncComponent`](#defineasynccomponent)
+11. [`Action`](#action)
+12. [`Host` `Tmpl` `Slotted`](#插槽组件)
 
 ### useAwait
 
@@ -138,6 +139,57 @@ async function request() {
   await new Promise(resolve => setTimeout(resolve, 1000));
   count += 1;
   return "hello world" + count;
+}
+```
+
+### useAwaitState
+
+***? 表示可选属性***
+
+| `options`  |                         `type`                         | `description`                  |
+|:-----------|:------------------------------------------------------:|:-------------------------------|
+| deps?      |                          any                           | 依赖                             |
+| handle     |           (deps: any, arg?: any) => Promise            | 生成 Promise                     |                            |
+| init?      |                          any                           | 初始值                            |
+| delay?     |                         number                         | 延迟，默认 300 ms，Promise 完成快屏幕会闪烁  |
+| jumpFirst? |                        boolean                         | 跳过首次请求，一般和 init 配合             |
+| onStart?   |                (first: boolean) => void                | Promise 开始时执行，first 表示是否是第一次执行 |
+| onEnd?     |                (first: boolean) => void                | Promise 结束时执行，无论是否成功           |
+| onError?   |                  (error: any) => void                  | Promise 出错时执行                  |
+
+***示例***
+
+```jsx
+import {useState} from "react";
+import {useAwaitState, isPending} from "react-await-util";
+import {Skeleton, Spin, Button, Flex} from "antd";
+
+function Foo() {
+  const [count, setCount] = useState(0);
+  // setCountResolve 提供的值是 Promise，使用该 Promise，否则将值传递给 handle 函数生成 Promise
+  const [countResolve, setCountResolve] = useAwaitState({
+    deps: count,
+    // count 参数对应 deps 依赖，arg 是 setCountResolve 传递的值
+    handle: async (count, arg) => {
+      console.log(arg);
+      await new Promise(resolve => setTimeout(resolve, 1000));
+      return "hello" + count;
+    },
+  });
+  return (
+    <Skeleton loading={countResolve.first}>
+      <Spin spinning={!countResolve.first && isPending(countResolve.status)}>
+        <Flex vertical align="center" gap="middle">
+          <h1>{count}</h1>
+          <h1>{countResolve.value}</h1>
+          <Flex jusify="center" gap="middle">
+            <Button onClick={() => setCount(count + 1)}>add</Button>
+            <Button onClick={setCountResolve}>update</Button>
+          </Flex>
+        </Flex>
+      </Spin>
+    </Skeleton>
+  );
 }
 ```
 
@@ -662,7 +714,7 @@ function useCalcCountAction({count}) {
 > `Host` 宿主  
 > `Tmpl` 模板  
 > `Slotted` 占位  
-> `Host` 只渲染第一个子元素，其他元素都是 `Tmpl` 组件  
+> ***`Host` 只渲染第一个子元素，第一个元素不能是 `Tmpl`，其他元素都是 `Tmpl` 组件***  
 > `Tmpl` 和 `Slotted` 的 `name` 一一对应，默认是 `default`
 
 ***示例***

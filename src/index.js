@@ -8,6 +8,7 @@ export {
   isResolve,
   isReject,
   useAwait,
+  useAwaitState,
   useAwaitWatch,
   useAwaitWatchObject,
   useAwaitWatchArray,

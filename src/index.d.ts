@@ -45,6 +45,19 @@ export interface AwaitOptions<T, E = any> {
 
 export declare function useAwait<T = any, E = any>(options: AwaitOptions<T, E>): ResolveData<T, E>;
 
+export interface AwaitStatusOptions<T, Deps = any, Arg = any, E = any> {
+  deps?: Deps;
+  handle: (deps: Deps, arg?: Arg) => Promise<T>;
+  init?: T;
+  delay?: number;
+  jumpFirst?: boolean;
+  onStart?: (first: boolean) => void;
+  onEnd?: (first: boolean) => void;
+  onError?: (error: E) => void;
+}
+
+export declare function useAwaitState<T = any, Deps = any, Arg = any, E = any>(options: AwaitStatusOptions<T, Deps, E>): [ResolveData<T, E>, (resolve?: Promise<T> | Arg) => void];
+
 export type AwaitProps<T, U = any, E = any> = AwaitOptions<T, E> & {
   onComputed?: (resolveData: ResolveData<T, E>) => U;
   children: (data: ResolveData<T, E> & { computed: U; placeholder?: RefObject<any>; }) => ReactElement;

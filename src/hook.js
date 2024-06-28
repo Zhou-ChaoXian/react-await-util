@@ -16,6 +16,7 @@ export {
   isResolve,
   isReject,
   useAwait,
+  useAwaitState,
   useAwaitWatch,
   useAwaitWatchObject,
   useAwaitWatchArray,
@@ -56,7 +57,7 @@ function useAwait(
   const cancelMap = useRef(new Map()).current;
   const cacheResolve = useRef(null);
   const updateFlag = useRef(false);
-  const status = useRef(pendingStatus);
+  const [status] = useState(() => ({current: resolve instanceof Promise ? pendingStatus : resolveStatus}));
   const resolveValue = useRef(init);
   const generateResolveData = () => ({
     first: first.current,
@@ -109,6 +110,36 @@ function useAwait(
     resolveData.current = generateResolveData();
   }
   return resolveData.current;
+}
+
+function useAwaitState(
+  {
+    deps,
+    handle,
+    init,
+    delay = 300,
+    jumpFirst = false,
+    onStart,
+    onEnd,
+    onError
+  }
+) {
+  const cacheDeps = useRef(undefined);
+  cacheDeps.current = deps;
+  const [resolve, set] = useState(() => jumpFirst ? undefined : handle(deps));
+  const setResolve = useCallback((resolve) => {
+    set(resolve instanceof Promise ? resolve : handle(cacheDeps.current, resolve));
+  }, []);
+  const resolveData = useAwait({
+    resolve,
+    init,
+    delay,
+    jumpFirst,
+    onStart,
+    onEnd,
+    onError,
+  });
+  return [resolveData, setResolve];
 }
 
 function useAwaitWatch(
