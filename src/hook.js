@@ -75,6 +75,7 @@ function useAwait(
       resolve = trackedResolve(init);
     } else {
       if (!(resolve instanceof Promise)) {
+        first.current = false;
         status.current = resolveStatus;
         generateResolveData();
       }
