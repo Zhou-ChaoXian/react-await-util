@@ -28,8 +28,9 @@
 | delay?     |          number          | 延迟，默认 300 ms，Promise 完成快屏幕会闪烁  |
 | jumpFirst? |         boolean          | 跳过首次请求，一般和 init 配合             |
 | onStart?   | (first: boolean) => void | Promise 开始时执行，first 表示是否是第一次执行 |
-| onEnd?     | (first: boolean) => void | Promise 结束时执行，无论是否成功           |
-| onError?   |   (error: any) => void   | Promise 出错时执行                  |
+| onEnd?     |   (value: any) => void   | promise 正确结束时执行 then           |
+| onError?   |   (error: any) => void   | promise 报错时执行 catch            |
+| onFinal?   | (first: boolean) => void | promise 结束时执行 finally          |
 
 ```ts
 declare const pendingStatus: unique symbol;
@@ -90,8 +91,9 @@ function Foo() {
 | delay?      |          number          | 延迟，默认 300 ms，Promise 完成快屏幕会闪烁  |
 | jumpFirst?  |         boolean          | 跳过首次请求，一般和 init 配合             |
 | onStart?    | (first: boolean) => void | Promise 开始时执行，first 表示是否是第一次执行 |
-| onEnd?      | (first: boolean) => void | Promise 结束时执行，无论是否成功           |
-| onError?    |   (error: any) => void   | Promise 出错时执行                  |
+| onEnd?      |   (value: any) => void   | promise 正确结束时执行 then           |
+| onError?    |   (error: any) => void   | promise 报错时执行 catch            |
+| onFinal?    | (first: boolean) => void | promise 结束时执行 finally          |
 | onComputed? |        OnComputed        | 对结果先处理                         |
 | children    |        ChildrenFn        | 子元素是函数，给 Promise 提供一个抽象的结果     |
 
@@ -146,16 +148,17 @@ async function request() {
 
 ***? 表示可选属性***
 
-| `options`  |                         `type`                         | `description`                  |
-|:-----------|:------------------------------------------------------:|:-------------------------------|
-| deps?      |                          any                           | 依赖                             |
-| handle     |           (deps: any, arg?: any) => Promise            | 生成 Promise                     |                            |
-| init?      |                          any                           | 初始值                            |
-| delay?     |                         number                         | 延迟，默认 300 ms，Promise 完成快屏幕会闪烁  |
-| jumpFirst? |                        boolean                         | 跳过首次请求，一般和 init 配合             |
-| onStart?   |                (first: boolean) => void                | Promise 开始时执行，first 表示是否是第一次执行 |
-| onEnd?     |                (first: boolean) => void                | Promise 结束时执行，无论是否成功           |
-| onError?   |                  (error: any) => void                  | Promise 出错时执行                  |
+| `options`  |              `type`               | `description`                  |
+|:-----------|:---------------------------------:|:-------------------------------|
+| deps?      |                any                | 依赖                             |
+| handle     | (deps: any, arg?: any) => Promise | 生成 Promise                     |
+| init?      |                any                | 初始值                            |
+| delay?     |              number               | 延迟，默认 300 ms，Promise 完成快屏幕会闪烁  |
+| jumpFirst? |              boolean              | 跳过首次请求，一般和 init 配合             |
+| onStart?   |     (first: boolean) => void      | Promise 开始时执行，first 表示是否是第一次执行 |
+| onEnd?     |       (value: any) => void        | promise 正确结束时执行 then           |
+| onError?   |       (error: any) => void        | promise 报错时执行 catch            |
+| onFinal?   |     (first: boolean) => void      | promise 结束时执行 finally          |
 
 ***示例***
 
@@ -200,14 +203,15 @@ function Foo() {
 | `options`  |                         `type`                         | `description`                  |
 |:-----------|:------------------------------------------------------:|:-------------------------------|
 | deps?      |                          any                           | 依赖                             |
-| handle     |                 (deps: any) => Promise                 | 生成 Promise                     |                            |
+| handle     |                 (deps: any) => Promise                 | 生成 Promise                     |
 | compare?   | ((newDeps: any, oldDeps: any) => boolean) &#124; false | 对比函数，默认 === 对比                 |
 | init?      |                          any                           | 初始值                            |
 | delay?     |                         number                         | 延迟，默认 300 ms，Promise 完成快屏幕会闪烁  |
 | jumpFirst? |                        boolean                         | 跳过首次请求，一般和 init 配合             |
 | onStart?   |                (first: boolean) => void                | Promise 开始时执行，first 表示是否是第一次执行 |
-| onEnd?     |                (first: boolean) => void                | Promise 结束时执行，无论是否成功           |
-| onError?   |                  (error: any) => void                  | Promise 出错时执行                  |
+| onEnd?     |                  (value: any) => void                  | promise 正确结束时执行 then           |
+| onError?   |                  (error: any) => void                  | promise 报错时执行 catch            |
+| onFinal?   |                (first: boolean) => void                | promise 结束时执行 finally          |
 
 ```ts
 interface WatchOptions {
@@ -271,8 +275,9 @@ function Foo() {
 | delay?      |                         number                         | 延迟，默认 300 ms，Promise 完成快屏幕会闪烁  |
 | jumpFirst?  |                        boolean                         | 跳过首次请求，一般和 init 配合             |
 | onStart?    |                (first: boolean) => void                | Promise 开始时执行，first 表示是否是第一次执行 |
-| onEnd?      |                (first: boolean) => void                | Promise 结束时执行，无论是否成功           |
-| onError?    |                  (error: any) => void                  | Promise 出错时执行                  |
+| onEnd?      |                  (value: any) => void                  | promise 正确结束时执行 then           |
+| onError?    |                  (error: any) => void                  | promise 报错时执行 catch            |
+| onFinal?    |                (first: boolean) => void                | promise 结束时执行 finally          |
 | onComputed? |                    OnComputed (同上)                     | 对结果先处理                         |
 | children    |                       ChildrenFn                       | 子元素是函数，给 Promise 提供一个抽象的结果     |
 
@@ -445,8 +450,9 @@ function Foo() {
 | delay?      |                          number                          | 延迟，默认 300 ms，Promise 完成快屏幕会闪烁  |
 | jumpFirst?  |                         boolean                          | 跳过首次请求，一般和 init 配合             |
 | onStart?    |                 (first: boolean) => void                 | Promise 开始时执行，first 表示是否是第一次执行 |
-| onEnd?      |                 (first: boolean) => void                 | Promise 结束时执行，无论是否成功           |
-| onError?    |                   (error: any) => void                   | Promise 出错时执行                  |
+| onEnd?      |                   (value: any) => void                   | promise 正确结束时执行 then           |
+| onError?    |                   (error: any) => void                   | promise 报错时执行 catch            |
+| onFinal?    |                 (first: boolean) => void                 | promise 结束时执行 finally          |
 | onComputed? |                        OnComputed                        | 对结果先处理                         |
 | children    |                        ChildrenFn                        | 子元素是函数，给 Promise 提供一个抽象的结果     |
 
@@ -590,8 +596,9 @@ async function Bar() {
 | delay?      |                                          number                                          | 延迟，防止闪烁                        |
 | jumpFirst?  |                                         boolean                                          | 跳过首次请求                         |
 | onStart?    |                                 (first: boolean) => void                                 | Promise 开始时执行，first 表示是否是第一次执行 |
-| onEnd?      |                                 (first: boolean) => void                                 | Promise 结束时执行，无论是否成功           |
-| onError?    |                                   (error: any) => void                                   | Promise 出错时执行                  |
+| onEnd?      |                                   (value: any) => void                                   | promise 正确结束时执行 then           |
+| onError?    |                                   (error: any) => void                                   | promise 报错时执行 catch            |
+| onFinal?    |                                 (first: boolean) => void                                 | promise 结束时执行 finally          |
 | onComputed? |                                        OnComputed                                        | 对结果先处理                         |
 | useAction?  |                     (props: any, watchOptions: WatchOptions) => any                      | 组件的状态和行为 (hook)                |
 | loader      |                           (props: any, action: any) => Promise                           | loader，生成 Promise              |
