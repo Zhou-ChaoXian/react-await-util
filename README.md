@@ -67,7 +67,7 @@ function Foo() {
   const {first, status, value} = useAwait({resolve});
   return (
     <Skeleton loading={first}>
-      <Spin spinning={!first && isPending(status)}>
+      <Spin spinning={isPending(status)}>
         <Flex vertical justify="center" align="center" gap="middle">
           <h1>{count}</h1>
           <Button onClick={add}>add</Button>
@@ -124,7 +124,7 @@ function Foo() {
   return (
     <Await resolve={resolve}>{({first, status, value}) =>
       <Skeleton loading={first}>
-        <Spin spinning={!first && isPending(status)}>
+        <Spin spinning={isPending(status)}>
           <h1>{value}</h1>
           <Button onClick={update}>update</Button>
         </Spin>
@@ -178,7 +178,7 @@ function Foo() {
   });
   return (
     <Skeleton loading={countResolve.first}>
-      <Spin spinning={!countResolve.first && isPending(countResolve.status)}>
+      <Spin spinning={isPending(countResolve.status)}>
         <Flex vertical align="center" gap="middle">
           <h1>{count}</h1>
           <h1>{countResolve.value}</h1>
@@ -241,7 +241,7 @@ function Foo() {
   });
   return (
     <Skeleton loading={first}>
-      <Spin spinning={!first && isPending(status)}>
+      <Spin spinning={isPending(status)}>
         <Flex vertical justify="center" align="center" gap="middle">
           <h1>{count}</h1>
           <Button onClick={add}>add</Button>
@@ -307,7 +307,7 @@ function Foo() {
   return (
     <AwaitWatch deps={count} handle={request}>{({first, status, value, watchOptions}) =>
       <Skeleton loading={first}>
-        <Spin spinning={!first && isPending(status)}>
+        <Spin spinning={isPending(status)}>
           <h1>{count}</h1>
           <h1>{value}</h1>
           <Flex gap="middle">
@@ -361,7 +361,7 @@ function Foo() {
       <AwaitList order="forwards" tail="collapsed">
         <Await resolve={resolve1}>{({first, status, value}) =>
           <Skeleton loading={first}>
-            <Spin spinning={!first && isPending(status)}>
+            <Spin spinning={isPending(status)}>
               <h1>{value}</h1>
             </Spin>
           </Skeleton>
@@ -369,7 +369,7 @@ function Foo() {
         <hr/>
         <Await resolve={resolve2}>{({first, status, value}) =>
           <Skeleton loading={first}>
-            <Spin spinning={!first && isPending(status)}>
+            <Spin spinning={isPending(status)}>
               <h1>{value}</h1>
             </Spin>
           </Skeleton>
@@ -377,7 +377,7 @@ function Foo() {
         <hr/>
         <Await resolve={resolve3}>{({first, status, value}) =>
           <Skeleton loading={first}>
-            <Spin spinning={!first && isPending(status)}>
+            <Spin spinning={isPending(status)}>
               <h1>{value}</h1>
             </Spin>
           </Skeleton>
@@ -466,7 +466,7 @@ function Foo() {
   return (
     <Async wrap={<Bar count={count}/>}>{({first, status, value}) =>
       <Skeleton loading={first}>
-        <Spin spinning={!first && isPending(status)}>
+        <Spin spinning={isPending(status)}>
           <Flex justify="center" align="center" vertical gap="middle" style={{height: 200}}>
             <Button onClick={add}>add</Button>
             {value}
@@ -504,7 +504,7 @@ function Foo() {
   return (
     <Async wrap={<Bar count={count}/>}>{({first, status, value, watchOptions}) =>
       <Skeleton loading={first}>
-        <Spin spinning={!first && isPending(status)}>
+        <Spin spinning={isPending(status)}>
           <Flex justify="center" align="center" vertical gap="middle">
             <Button onClick={add}>add</Button>
             <Host>
@@ -645,7 +645,7 @@ const Bar = defineAsyncComponent({
     const {first, status, value, watchOptions} = useAsyncValue();
     return (
       <Skeleton loading={first}>
-        <Spin spinning={!first && isPending(status)}>
+        <Spin spinning={isPending(status)}>
           <Flex justify="center" align="center" vertical gap="middle" style={{height: 200}}>
             <h1>{value}</h1>
             <Flex justify="center" gap="middle">
