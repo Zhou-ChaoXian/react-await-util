@@ -39,8 +39,9 @@ export interface AwaitOptions<T, E = any> {
   delay?: number;
   jumpFirst?: boolean;
   onStart?: (first: boolean) => void;
-  onEnd?: (first: boolean) => void;
+  onEnd?: (value: T) => void;
   onError?: (error: E) => void;
+  onFinal?: (first: boolean) => void;
 }
 
 export declare function useAwait<T = any, E = any>(options: AwaitOptions<T, E>): ResolveData<T, E>;
@@ -52,8 +53,9 @@ export interface AwaitStatusOptions<T, Deps = any, Arg = any, E = any> {
   delay?: number;
   jumpFirst?: boolean;
   onStart?: (first: boolean) => void;
-  onEnd?: (first: boolean) => void;
+  onEnd?: (value: T) => void;
   onError?: (error: E) => void;
+  onFinal?: (first: boolean) => void;
 }
 
 export declare function useAwaitState<T = any, Deps = any, Arg = any, E = any>(options: AwaitStatusOptions<T, Deps, E>): [ResolveData<T, E>, (resolve?: Promise<T> | Arg) => void];
@@ -73,8 +75,9 @@ export interface AwaitWatchOptions<T, Deps, E = any> {
   delay?: number;
   jumpFirst?: boolean;
   onStart?: (first: boolean) => void;
-  onEnd?: (first: boolean) => void;
+  onEnd?: (value: T) => void;
   onError?: (error: E) => void;
+  onFinal?: (first: boolean) => void;
 }
 
 export declare function useAwaitWatch<T = any, Deps = any, E = any>(options: AwaitWatchOptions<T, Deps, E>): [ResolveData<T, E>, WatchOptions];
@@ -121,8 +124,9 @@ export interface AsyncProps<P = Record<string, any>, U = any, E = any> {
   delay?: number;
   jumpFirst?: boolean;
   onStart?: (first: boolean) => void;
-  onEnd?: (first: boolean) => void;
+  onEnd?: (value: ReactElement) => void;
   onError?: (error: E) => void;
+  onFinal?: (first: boolean) => void;
   onComputed?: (resolveData: ResolveData<ReactElement, E>) => U;
   children: (data: ResolveData<ReactElement, E> & { computed: U; watchOptions: WatchOptions; placeholder?: RefObject<any>; }) => ReactElement;
 }
@@ -147,8 +151,9 @@ export interface AsyncComponentOptions<P = Record<string, any>, T = any, A = any
   delay?: number;
   jumpFirst?: boolean;
   onStart?: (first: boolean) => void;
-  onEnd?: (first: boolean) => void;
+  onEnd?: (value: T) => void;
   onError?: (error: E) => void;
+  onFinal?: (first: boolean) => void;
   onComputed?: (resolveData: ResolveData<T, E>) => U;
   useAction?: (props: P, watchOptions: WatchOptions) => A;
   loader: (props: P, action: A) => Promise<T>;

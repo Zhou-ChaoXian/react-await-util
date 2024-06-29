@@ -44,6 +44,7 @@ function Await(
     onStart,
     onEnd,
     onError,
+    onFinal,
     onComputed,
     placeholder,
     children,
@@ -57,6 +58,7 @@ function Await(
     onStart,
     onEnd,
     onError,
+    onFinal,
   });
   const computed = useMemo(() => onComputed?.(resolveData), [resolveData]);
   if (resolve === noRender)
@@ -75,6 +77,7 @@ const AwaitWatch = forwardRef(function AwaitWatch(
     onStart,
     onEnd,
     onError,
+    onFinal,
     onComputed,
     children,
   },
@@ -90,6 +93,7 @@ const AwaitWatch = forwardRef(function AwaitWatch(
     onStart,
     onEnd,
     onError,
+    onFinal,
   });
   const computed = useMemo(() => onComputed?.(resolveData), [resolveData]);
   useImperativeHandle(ref, () => watchOptions, []);
@@ -107,6 +111,7 @@ const AwaitWatchObject = forwardRef(function AwaitWatchObject(
     onStart,
     onEnd,
     onError,
+    onFinal,
     onComputed,
     children,
   },
@@ -122,6 +127,7 @@ const AwaitWatchObject = forwardRef(function AwaitWatchObject(
     onStart,
     onEnd,
     onError,
+    onFinal,
   });
   const computed = useMemo(() => onComputed?.(resolveData), [resolveData]);
   useImperativeHandle(ref, () => watchOptions, []);
@@ -139,6 +145,7 @@ const AwaitWatchArray = forwardRef(function AwaitWatchArray(
     onStart,
     onEnd,
     onError,
+    onFinal,
     onComputed,
     children,
   },
@@ -154,6 +161,7 @@ const AwaitWatchArray = forwardRef(function AwaitWatchArray(
     onStart,
     onEnd,
     onError,
+    onFinal,
   });
   const computed = useMemo(() => onComputed?.(resolveData), [resolveData]);
   useImperativeHandle(ref, () => watchOptions, []);

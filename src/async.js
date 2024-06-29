@@ -38,6 +38,7 @@ const Async = forwardRef(function Async(
     onStart,
     onEnd,
     onError,
+    onFinal,
     onComputed,
     placeholder,
     children,
@@ -76,6 +77,7 @@ const Async = forwardRef(function Async(
     onStart,
     onEnd,
     onError,
+    onFinal,
   });
   const computed = useMemo(() => onComputed?.(resolveData), [resolveData]);
   return children({...resolveData, computed, placeholder, watchOptions});
@@ -132,6 +134,7 @@ function defineAsyncComponent(
     onStart,
     onEnd,
     onError,
+    onFinal,
     onComputed,
     useAction = defaultUseAction,
     loader,
@@ -170,6 +173,7 @@ function defineAsyncComponent(
       onStart,
       onEnd,
       onError,
+      onFinal,
     });
     const computed = useMemo(() => onComputed?.(resolveData), [resolveData]);
     return createElement(

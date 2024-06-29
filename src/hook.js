@@ -50,29 +50,52 @@ function useAwait(
     onStart,
     onEnd,
     onError,
+    onFinal,
   }
 ) {
   const forceUpdate = useForceUpdate();
   const first = useRef(true);
   const cancelMap = useRef(new Map()).current;
   const cacheResolve = useRef(null);
-  const updateFlag = useRef(false);
-  const [status] = useState(() => ({current: resolve instanceof Promise ? pendingStatus : resolveStatus}));
+  const status = useRef(pendingStatus);
   const resolveValue = useRef(init);
-  const generateResolveData = () => ({
-    first: first.current,
-    status: status.current,
-    value: resolveValue.current,
-    error: (resolve instanceof Promise ? Reflect.get(resolve, _error) : undefined),
+  const resolveData = useRef(null);
+  const generateResolveData = useCallback(() => {
+    const resolve = cacheResolve.current;
+    resolveData.current = {
+      first: first.current,
+      status: status.current,
+      value: resolveValue.current,
+      error: resolve instanceof Promise ? Reflect.get(resolve, _error) : undefined,
+    };
+  }, []);
+  useState(() => {
+    if (jumpFirst) {
+      first.current = false;
+      resolve = trackedResolve(init);
+    } else {
+      if (!(resolve instanceof Promise)) {
+        status.current = resolveStatus;
+        generateResolveData();
+      }
+    }
   });
-  const [resolveData] = useState(() => ({current: generateResolveData()}));
-  if (first.current && jumpFirst) {
-    first.current = false;
-    resolve = trackedResolve(init);
-  }
-  if (resolve instanceof Promise && (cacheResolve.current !== resolve || updateFlag.current)) {
-    updateFlag.current = false;
-    if (!Reflect.has(resolve, _tracked)) {
+  if (resolve instanceof Promise && cacheResolve.current !== resolve) {
+    const setStatus = () => {
+      const resolve = cacheResolve.current;
+      if (Reflect.has(resolve, _data)) {
+        status.current = resolveStatus;
+        resolveValue.current = Reflect.get(resolve, _data);
+        onEnd?.(resolveValue.current);
+      } else {
+        status.current = rejectStatus;
+        onError?.(Reflect.get(resolve, _error));
+      }
+    };
+    if (Reflect.has(resolve, _tracked)) {
+      cacheResolve.current = resolve;
+      setStatus();
+    } else {
       resolve = Object.defineProperty(resolve, _tracked, {value: true});
       cancelMap.get(cacheResolve.current)?.();
       cacheResolve.current = resolve;
@@ -90,24 +113,16 @@ function useAwait(
         setTimeout(() => {
           if (flag) {
             cancelMap.delete(resolve);
-            onEnd?.(first.current);
+            setStatus();
+            onFinal?.(first.current);
             first.current = false;
-            updateFlag.current = true;
+            generateResolveData();
             forceUpdate();
           }
         }, delay);
       });
-    } else {
-      cacheResolve.current = resolve;
-      if (Reflect.has(resolve, _data)) {
-        status.current = resolveStatus;
-        resolveValue.current = Reflect.get(resolve, _data);
-      } else {
-        status.current = rejectStatus;
-        onError?.(Reflect.get(resolve, _error));
-      }
     }
-    resolveData.current = generateResolveData();
+    generateResolveData();
   }
   return resolveData.current;
 }
@@ -121,7 +136,8 @@ function useAwaitState(
     jumpFirst = false,
     onStart,
     onEnd,
-    onError
+    onError,
+    onFinal,
   }
 ) {
   const cacheDeps = useRef(undefined);
@@ -138,6 +154,7 @@ function useAwaitState(
     onStart,
     onEnd,
     onError,
+    onFinal,
   });
   return [resolveData, setResolve];
 }
@@ -153,6 +170,7 @@ function useAwaitWatch(
     onStart,
     onEnd,
     onError,
+    onFinal,
   }
 ) {
   const cacheResolve = useRef(null);
@@ -178,6 +196,7 @@ function useAwaitWatch(
     onStart,
     onEnd,
     onError,
+    onFinal,
   });
   return [resolveData, watchOptions];
 }
@@ -193,6 +212,7 @@ function useAwaitWatchObject(
     onStart,
     onEnd,
     onError,
+    onFinal,
   }
 ) {
   return useAwaitWatch({
@@ -205,6 +225,7 @@ function useAwaitWatchObject(
     onStart,
     onEnd,
     onError,
+    onFinal,
   });
 }
 
@@ -219,6 +240,7 @@ function useAwaitWatchArray(
     onStart,
     onEnd,
     onError,
+    onFinal,
   }
 ) {
   return useAwaitWatch({
@@ -231,6 +253,7 @@ function useAwaitWatchArray(
     onStart,
     onEnd,
     onError,
+    onFinal,
   });
 }
 
