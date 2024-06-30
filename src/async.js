@@ -83,7 +83,16 @@ const Async = forwardRef(function Async(
   return children({...resolveData, computed, placeholder, watchOptions});
 });
 
-function AsyncView({root, rootIsParent, rootMargin, threshold, children, onIntersection = defaultIntersection}) {
+function AsyncView(
+  {
+    root,
+    rootIsParent,
+    rootMargin,
+    threshold,
+    children,
+    onIntersection = defaultIntersection,
+  }
+) {
   const [valid] = useState(() => isValidElement(children) && children.type === Async);
   const [[generateResolve, handle]] = useState(() => {
     const {promise, resolve} = withResolvers();
@@ -94,21 +103,16 @@ function AsyncView({root, rootIsParent, rootMargin, threshold, children, onInter
         return flag.current ? realResolve : promise;
       },
       () => {
-        valid && resolve(trackedPromise(realResolve));
+        if (valid) {
+          resolve(trackedPromise(realResolve));
+        }
       }
     ];
   });
   const {placeholder, flag} = useView(handle, root, rootIsParent, rootMargin, threshold, onIntersection);
   if (valid) {
-    let value, childrenEl;
-    if (flag.current) {
-      value = defaultGenerateResolve;
-      childrenEl = children;
-    } else {
-      value = generateResolve;
-      childrenEl = cloneElement(children, {placeholder});
-    }
-    return createElement(GenerateResolveContext.Provider, {value}, childrenEl);
+    const el = flag.current ? children : cloneElement(children, {placeholder});
+    return createElement(GenerateResolveContext.Provider, {value: generateResolve}, el);
   }
 }
 

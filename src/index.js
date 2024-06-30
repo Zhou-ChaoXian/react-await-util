@@ -9,6 +9,7 @@ export {
   isReject,
   useAwait,
   useAwaitState,
+  useAwaitReducer,
   useAwaitWatch,
   useAwaitWatchObject,
   useAwaitWatchArray,

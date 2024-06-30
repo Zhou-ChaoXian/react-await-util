@@ -7,15 +7,18 @@
 1. [`useAwait`](#useawait)
 2. [`Await`](#await)
 3. [`useAwaitState`](#useawaitstate)
-4. [`useAwaitWatch`](#useawaitwatch)
-5. [`AwaitWatch`](#awaitwatch)
-6. [`AwaitList`](#awaitlist)
-7. [`AwaitView`](#awaitview)
-8. [`Async`](#async)
-9. [`AsyncView`](#asyncview)
-10. [`defineAsyncComponent`](#defineasynccomponent)
-11. [`Action`](#action)
-12. [`Host` `Tmpl` `Slotted`](#插槽组件)
+4. [`AwaitState`](#awaitstate)
+5. [`useAwaitReducer`](#useawaitreducer)
+6. [`AwaitReducer`](#awaitreducer)
+7. [`useAwaitWatch`](#useawaitwatch)
+8. [`AwaitWatch`](#awaitwatch)
+9. [`AwaitList`](#awaitlist)
+10. [`AwaitView`](#awaitview)
+11. [`Async`](#async)
+12. [`AsyncView`](#asyncview)
+13. [`defineAsyncComponent`](#defineasynccomponent)
+14. [`Action`](#action)
+15. [`Host` `Tmpl` `Slotted`](#插槽组件)
 
 ### useAwait
 
@@ -84,18 +87,10 @@ function Foo() {
 
 ***? 表示可选属性***
 
-| `props`     |          `type`          | `description`                  |
-|:------------|:------------------------:|:-------------------------------|
-| resolve?    |         Promise          | 要处理的 Promise                   |
-| init?       |           any            | 初始值                            |
-| delay?      |          number          | 延迟，默认 300 ms，Promise 完成快屏幕会闪烁  |
-| jumpFirst?  |         boolean          | 跳过首次请求，一般和 init 配合             |
-| onStart?    | (first: boolean) => void | Promise 开始时执行，first 表示是否是第一次执行 |
-| onEnd?      |   (value: any) => void   | promise 正确结束时执行 then           |
-| onError?    |   (error: any) => void   | promise 报错时执行 catch            |
-| onFinal?    | (first: boolean) => void | promise 结束时执行 finally          |
-| onComputed? |        OnComputed        | 对结果先处理                         |
-| children    |        ChildrenFn        | 子元素是函数，给 Promise 提供一个抽象的结果     |
+| `props`     |   `type`   | `description`              |
+|:------------|:----------:|:---------------------------|
+| onComputed? | OnComputed | 对结果先处理                     |
+| children    | ChildrenFn | 子元素是函数，给 Promise 提供一个抽象的结果 |
 
 ```ts
 import type {ReactElement, RefObject} from "react";
@@ -169,7 +164,7 @@ import {Skeleton, Spin, Button, Flex} from "antd";
 
 function Foo() {
   const [count, setCount] = useState(0);
-  // setCountResolve 提供的值是 Promise，使用该 Promise，否则将值传递给 handle 函数生成 Promise
+  // setCountResolve 可以传任何值，调用 handle 生成新 Promise (如果传的是 Promise，会变成 Promise 完成的值)
   const [countResolve, setCountResolve] = useAwaitState({
     deps: count,
     // count 参数对应 deps 依赖，arg 是 setCountResolve 传递的值
@@ -192,6 +187,222 @@ function Foo() {
         </Flex>
       </Spin>
     </Skeleton>
+  );
+}
+```
+
+### AwaitState
+
+***? 表示可选属性***
+
+| `props`     |   `type`   | `description`              |
+|:------------|:----------:|:---------------------------|
+| onComputed? | OnComputed | 对结果先处理                     |
+| children    | ChildrenFn | 子元素是函数，给 Promise 提供一个抽象的结果 |
+
+```ts
+import type {ReactElement} from "react";
+
+interface ResolveData {
+  first: boolean;
+  status: typeof pendingStatus | typeof resolveStatus | typeof rejectStatus;
+  value: any;
+  error: any;
+  computed: any;
+  setResolve: (resolve: any) => void;  // 同上
+}
+
+type ChildrenFn = (resolveData: ResolveData) => ReactElement;
+```
+
+***示例***
+
+```jsx
+import {useState} from "react";
+import {isPending, AwaitStatus} from "react-await-util";
+import {Skeleton, Spin, Button, Flex} from "antd";
+
+async function countHandle(count, arg) {
+  console.log("arg =>", arg);
+  await new Promise(resolve => setTimeout(resolve, 1000));
+  return "hello" + count;
+}
+
+function Foo() {
+  const [count, setCount] = useState(0);
+  return (
+    <AwaitStatus deps={count} handle={countHandle}>{({first, status, value, setResolve}) =>
+      <Skeleton loading={first}>
+        <Spin spinning={isPending(status)}>
+          <Flex vertical align="center" gap="middle">
+            <h1>count - {count}</h1>
+            <h1>{value}</h1>
+            <Button.Group>
+              <Button onClick={() => setCount(count + 1)} disabled={isPending(status)}>add</Button>
+              <Button onClick={() => setResolve("123")} disabled={isPending(status)}>setResolve</Button>
+            </Button.Group>
+          </Flex>
+        </Spin>
+      </Skeleton>
+    }</AwaitStatus>
+  );
+}
+```
+
+### useAwaitReducer
+
+***? 表示可选属性***
+
+| `options`     |              `type`               | `description`                  |
+|:--------------|:---------------------------------:|:-------------------------------|
+| deps?         |                any                | 依赖                             |
+| handle        | (deps: any, arg?: any) => Promise | 生成 Promise                     |
+| reducersDeps? |        Record<string, any>        | reducers 依赖                    |
+| reducers?     |             Reducers              | reducers                       |
+| init?         |                any                | 初始值                            |
+| delay?        |              number               | 延迟，默认 300 ms，Promise 完成快屏幕会闪烁  |
+| jumpFirst?    |              boolean              | 跳过首次请求，一般和 init 配合             |
+| onStart?      |     (first: boolean) => void      | Promise 开始时执行，first 表示是否是第一次执行 |
+| onEnd?        |       (value: any) => void        | promise 正确结束时执行 then           |
+| onError?      |       (error: any) => void        | promise 报错时执行 catch            |
+| onFinal?      |     (first: boolean) => void      | promise 结束时执行 finally          |
+
+```ts
+type Reducer = (action: { type: string; payload: any; deps: any; }) => any;
+type Reducers = Record<string, Reducer> | (() => Record<string, Reducer>);
+```
+
+***示例***
+
+```jsx
+import {useState} from "react";
+import {useAwaitReducer, isPending} from "react-await-util";
+import {Skeleton, Spin, Button, Flex} from "antd";
+
+async function countHandle(count, arg) {
+  console.log("arg =>", arg);
+  await new Promise(resolve => setTimeout(resolve, 1000));
+  return "hello" + count;
+}
+
+function countReducers() {
+  return {
+    test1: () => {
+      return "test1";
+    },
+    test2: async ({type, payload, deps}) => {
+      await new Promise(resolve => setTimeout(resolve, 1000));
+      console.log(type, payload, deps);
+      return "test2";
+    }
+  };
+}
+
+function Foo() {
+  const [count, setCount] = useState(0);
+  // 调用 dispatch 生成新 Promise，actions 是 dispath 快捷操作
+  const [{first, status, value}, dispatch, actions] = useAwaitReducer({
+    deps: count,
+    reducersDeps: {
+      test1: count,
+      test2: count,
+    },
+    handle: countHandle,
+    reducers: countReducers,
+  });
+
+  return (
+    <Skeleton loading={first}>
+      <Spin spinning={isPending(status)}>
+        <Flex vertical align="center" gap="middle">
+          <h1>count - {count}</h1>
+          <h1>{value}</h1>
+          <Button.Group>
+            <Button onClick={() => setCount(count + 1)} disabled={isPending(status)}>add</Button>
+            <Button onClick={() => dispatch({type: "test1"})} disabled={isPending(status)}>test1</Button>
+            <Button onClick={() => actions.test2("!!!")} disabled={isPending(status)}>test2</Button>
+          </Button.Group>
+        </Flex>
+      </Spin>
+    </Skeleton>
+  );
+}
+```
+
+### AwaitReducer
+
+***? 表示可选属性***
+
+| `props`     |   `type`   | `description`              |
+|:------------|:----------:|:---------------------------|
+| onComputed? | OnComputed | 对结果先处理                     |
+| children    | ChildrenFn | 子元素是函数，给 Promise 提供一个抽象的结果 |
+
+```ts
+import type {ReactElement} from "react";
+
+interface ResolveData {
+  first: boolean;
+  status: typeof pendingStatus | typeof resolveStatus | typeof rejectStatus;
+  value: any;
+  error: any;
+  computed: any;
+  dispatch: (action: { type: string; payload?: any; }) => void;  // 同上
+  actions: Record<string, (payload?: any) => void>;
+}
+
+type ChildrenFn = (resolveData: ResolveData) => ReactElement;
+```
+
+***示例***
+
+```jsx
+import {useState} from "react";
+import {isPending, AwaitReducer} from "react-await-util";
+import {Skeleton, Spin, Button, Flex} from "antd";
+
+async function countHandle(count, arg) {
+  console.log("arg =>", arg);
+  await new Promise(resolve => setTimeout(resolve, 1000));
+  return "hello" + count;
+}
+
+function countReducers() {
+  return {
+    test1: () => {
+      return "test1";
+    },
+    test2: async ({type, payload, deps}) => {
+      await new Promise(resolve => setTimeout(resolve, 1000));
+      console.log(type, payload, deps);
+      return "test2";
+    }
+  };
+}
+
+function Foo() {
+  const [count, setCount] = useState(0);
+  return (
+    <AwaitReducer
+      handle={countHandle}
+      reducers={countReducers}
+      deps={count}
+      reducersDeps={{test1: count, test2: count}}
+    >{({first, status, value, dispatch, actions}) =>
+      <Skeleton loading={first}>
+        <Spin spinning={isPending(status)}>
+          <Flex vertical align="center" gap="middle">
+            <h1>count - {count}</h1>
+            <h1>{value}</h1>
+            <Button.Group>
+              <Button onClick={() => setCount(count + 1)} disabled={isPending(status)}>add</Button>
+              <Button onClick={() => dispatch({type: "test1"})} disabled={isPending(status)}>test1</Button>
+              <Button onClick={() => actions.test2("!!!")} disabled={isPending(status)}>test2</Button>
+            </Button.Group>
+          </Flex>
+        </Spin>
+      </Skeleton>
+    }</AwaitReducer>
   );
 }
 ```
@@ -266,20 +477,10 @@ function Foo() {
 
 ***? 表示可选属性***
 
-| `props`     |                         `type`                         | `description`                  |
-|:------------|:------------------------------------------------------:|:-------------------------------|
-| deps?       |                          any                           | 依赖                             |
-| handle      |                 (deps: any) => Promise                 | 生成 Promise                     |
-| compare?    | ((newDeps: any, oldDeps: any) => boolean) &#124; false | 对比函数，默认 === 对比                 |
-| init?       |                          any                           | 初始值                            |
-| delay?      |                         number                         | 延迟，默认 300 ms，Promise 完成快屏幕会闪烁  |
-| jumpFirst?  |                        boolean                         | 跳过首次请求，一般和 init 配合             |
-| onStart?    |                (first: boolean) => void                | Promise 开始时执行，first 表示是否是第一次执行 |
-| onEnd?      |                  (value: any) => void                  | promise 正确结束时执行 then           |
-| onError?    |                  (error: any) => void                  | promise 报错时执行 catch            |
-| onFinal?    |                (first: boolean) => void                | promise 结束时执行 finally          |
-| onComputed? |                    OnComputed (同上)                     | 对结果先处理                         |
-| children    |                       ChildrenFn                       | 子元素是函数，给 Promise 提供一个抽象的结果     |
+| `props`     |     `type`      | `description`              |
+|:------------|:---------------:|:---------------------------|
+| onComputed? | OnComputed (同上) | 对结果先处理                     |
+| children    |   ChildrenFn    | 子元素是函数，给 Promise 提供一个抽象的结果 |
 
 ```ts
 import type {ReactElement} from "react";

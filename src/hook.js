@@ -17,6 +17,7 @@ export {
   isReject,
   useAwait,
   useAwaitState,
+  useAwaitReducer,
   useAwaitWatch,
   useAwaitWatchObject,
   useAwaitWatchArray,
@@ -145,7 +146,10 @@ function useAwaitState(
   cacheDeps.current = deps;
   const [resolve, set] = useState(() => jumpFirst ? undefined : handle(deps));
   const setResolve = useCallback((resolve) => {
-    set(resolve instanceof Promise ? resolve : handle(cacheDeps.current, resolve));
+    const v = resolve instanceof Promise ?
+      resolve.then(value => handle(cacheDeps.current, value)) :
+      handle(cacheDeps.current, resolve);
+    set(v);
   }, []);
   const resolveData = useAwait({
     resolve,
@@ -158,6 +162,55 @@ function useAwaitState(
     onFinal,
   });
   return [resolveData, setResolve];
+}
+
+function useAwaitReducer(
+  {
+    deps,
+    handle,
+    reducersDeps,
+    reducers: reducersOrFunction,
+    init,
+    delay = 300,
+    jumpFirst = false,
+    onStart,
+    onEnd,
+    onError,
+    onFinal,
+  }
+) {
+  const [resolveData, setResolve] = useAwaitState({
+    deps,
+    handle,
+    init,
+    delay,
+    jumpFirst,
+    onStart,
+    onEnd,
+    onError,
+    onFinal,
+  });
+  const cacheReducersDeps = useRef(undefined);
+  cacheReducersDeps.current = reducersDeps;
+  const [reducers] = useState(() =>
+    typeof reducersOrFunction === "function" ?
+      reducersOrFunction() :
+      reducersOrFunction
+  );
+  const dispatch = useCallback((action) => {
+    const {type, payload} = action;
+    const reducer = reducers[type];
+    if (typeof reducer === "function") {
+      setResolve(reducer({type, payload, deps: cacheReducersDeps.current?.[type]}));
+    }
+  }, []);
+  const [actions] = useState(() => {
+    return Object.keys(reducers).reduce((obj, type) => {
+      obj[type] = (payload) => dispatch({type, payload});
+      return obj;
+    }, {})
+  });
+  return [resolveData, dispatch, actions];
 }
 
 function useAwaitWatch(

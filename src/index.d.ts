@@ -46,7 +46,14 @@ export interface AwaitOptions<T, E = any> {
 
 export declare function useAwait<T = any, E = any>(options: AwaitOptions<T, E>): ResolveData<T, E>;
 
-export interface AwaitStatusOptions<T, Deps = any, Arg = any, E = any> {
+export type AwaitProps<T, U = any, E = any> = AwaitOptions<T, E> & {
+  onComputed?: (resolveData: ResolveData<T, E>) => U;
+  children: (data: ResolveData<T, E> & { computed: U; placeholder?: RefObject<any>; }) => ReactElement;
+};
+
+export declare function Await<T = any, U = any, E = any>(props: AwaitProps<T, U, E>): ReactElement;
+
+export interface AwaitStateOptions<T, Deps = any, Arg = any, E = any> {
   deps?: Deps;
   handle: (deps: Deps, arg?: Arg) => Promise<T>;
   init?: T;
@@ -58,14 +65,62 @@ export interface AwaitStatusOptions<T, Deps = any, Arg = any, E = any> {
   onFinal?: (first: boolean) => void;
 }
 
-export declare function useAwaitState<T = any, Deps = any, Arg = any, E = any>(options: AwaitStatusOptions<T, Deps, E>): [ResolveData<T, E>, (resolve?: Promise<T> | Arg) => void];
+export declare function useAwaitState<T = any, Deps = any, Arg = any, E = any>(options: AwaitStateOptions<T, Deps, E>): [ResolveData<T, E>, (resolve?: Promise<Arg> | Arg) => void];
 
-export type AwaitProps<T, U = any, E = any> = AwaitOptions<T, E> & {
+export type AwaitStateProps<T, Deps = any, Arg = any, U = any, E = any> = AwaitStateOptions<T, Deps, Arg, E> & {
   onComputed?: (resolveData: ResolveData<T, E>) => U;
-  children: (data: ResolveData<T, E> & { computed: U; placeholder?: RefObject<any>; }) => ReactElement;
+  children: (data: ResolveData<T, E> & { computed: U; setResolve: (resolve?: Promise<Arg> | Arg) => void; }) => ReactElement;
 };
 
-export declare function Await<T = any, U = any, E = any>(props: AwaitProps<T, U, E>): ReactElement;
+export declare function AwaitState<T = any, Deps = any, Arg = any, U = any, E = any>(props: AwaitStateProps<T, Deps, Arg, U, E>): ReactElement
+
+export interface ActionType<T extends string = string, P = any> {
+  type: T;
+  payload?: P;
+}
+
+export type Reducer<R = any, T extends string = string, P = any, D = any> = (action: ActionType<T, P> & { deps: D; }) => R | Promise<R>;
+
+export type Reducers = Record<string, Reducer> | (() => Record<string, Reducer>);
+
+export interface AwaitReducerOptions<T, Rs extends Reducers = Reducers, Deps = any, RsDeps extends Record<string, any> = Record<string, any>, Arg = any, E = any> {
+  deps?: Deps;
+  handle: (deps: Deps, arg?: Arg) => Promise<T>;
+  reducersDeps?: RsDeps;
+  reducers?: Rs;
+  init?: T;
+  delay?: number;
+  jumpFirst?: boolean;
+  onStart?: (first: boolean) => void;
+  onEnd?: (value: T) => void;
+  onError?: (error: E) => void;
+  onFinal?: (first: boolean) => void;
+}
+
+export interface Dispatch<T extends string = string, P = any> {
+  (action: ActionType<T, P>): void;
+}
+
+type ReturnTypeOrSelf<T> = T extends (...args: any[]) => infer R ? R : T;
+
+type ReducersKey<T> = ReturnTypeOrSelf<T> extends Record<string, any> ? {
+  [K in keyof ReturnTypeOrSelf<T>]: ReturnTypeOrSelf<T>[K] extends Reducer ? K extends string ? K : never : never;
+} : never;
+
+type DispatchActions<T> = ReturnTypeOrSelf<T> extends Record<string, any> ? {
+  [K in keyof ReturnTypeOrSelf<T>]: ReturnTypeOrSelf<T>[K] extends Reducer<infer R, infer T1, infer P, infer D> ? (payload?: P) => void : never;
+} : never;
+
+export declare function useAwaitReducer<T = any, Rs extends Reducers = Reducers, Deps = any, RsDeps extends Record<string, any> = Record<string, any>, Arg = any, E = any>(options: AwaitReducerOptions<T, Rs, Deps, RsDeps, Arg, E>): [ResolveData<T, E>, Dispatch<ReducersKey<Rs>[keyof ReducersKey<Rs>]>, DispatchActions<Rs>];
+
+export type AwaitReducerProps<T, Rs extends Reducers = Reducers, Deps = any, RsDeps extends Record<string, any> = Record<string, any>, Arg = any, U = any, E = any> =
+  AwaitReducerOptions<T, Rs, Deps, RsDeps, Arg, E>
+  & {
+  onComputed?: (resolveData: ResolveData<T, E>) => U;
+  children: (data: ResolveData<T, E> & { computed: U; dispatch: Dispatch<ReducersKey<Rs>[keyof ReducersKey<Rs>]>, actions: DispatchActions<Rs>; }) => ReactElement;
+};
+
+export declare function AwaitReducer<T = any, Rs extends Reducers = Reducers, Deps = any, RsDeps extends Record<string, any> = Record<string, any>, Arg = any, U = any, E = any>(props: AwaitReducerProps<T, Rs, Deps, RsDeps, Arg, U, E>): ReactElement;
 
 export interface AwaitWatchOptions<T, Deps, E = any> {
   deps?: Deps;

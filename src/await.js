@@ -8,10 +8,13 @@ import {
   isValidElement,
   useImperativeHandle,
   useMemo,
+  useRef,
   useState,
 } from "react";
 import {
   useAwait,
+  useAwaitState,
+  useAwaitReducer,
   useAwaitWatch,
   useForceUpdate,
   useView,
@@ -28,6 +31,8 @@ import {
 
 export {
   Await,
+  AwaitState,
+  AwaitReducer,
   AwaitWatch,
   AwaitWatchObject,
   AwaitWatchArray,
@@ -65,6 +70,74 @@ function Await(
     return;
   return children({...resolveData, computed, placeholder});
 }
+
+const AwaitState = forwardRef(function AwaitState(
+  {
+    deps,
+    handle,
+    init,
+    delay = 300,
+    jumpFirst = false,
+    onStart,
+    onEnd,
+    onError,
+    onFinal,
+    onComputed,
+    children,
+  },
+  ref
+) {
+  const [resolveData, setResolve] = useAwaitState({
+    deps,
+    handle,
+    init,
+    delay,
+    jumpFirst,
+    onStart,
+    onEnd,
+    onError,
+    onFinal,
+  });
+  const computed = useMemo(() => onComputed?.(resolveData), [resolveData]);
+  useImperativeHandle(ref, () => setResolve, []);
+  return children({...resolveData, computed, setResolve});
+});
+
+const AwaitReducer = forwardRef(function AwaitReducer(
+  {
+    deps,
+    handle,
+    reducersDeps,
+    reducers: reducersOrFunction,
+    init,
+    delay = 300,
+    jumpFirst = false,
+    onStart,
+    onEnd,
+    onError,
+    onFinal,
+    onComputed,
+    children,
+  },
+  ref
+) {
+  const [resolveData, dispatch, actions] = useAwaitReducer({
+    deps,
+    handle,
+    reducersDeps,
+    reducers: reducersOrFunction,
+    init,
+    delay,
+    jumpFirst,
+    onStart,
+    onEnd,
+    onError,
+    onFinal,
+  });
+  const computed = useMemo(() => onComputed?.(resolveData), [resolveData]);
+  useImperativeHandle(ref, () => dispatch, []);
+  return children({...resolveData, computed, dispatch, actions});
+});
 
 const AwaitWatch = forwardRef(function AwaitWatch(
   {
@@ -247,23 +320,28 @@ function AwaitView(
     rootMargin,
     threshold,
     children,
-    onIntersection = defaultIntersection
+    onIntersection = defaultIntersection,
   }
 ) {
+  const cacheChildren = useRef(null);
   const [valid] = useState(() => isValidElement(children) && children.type === Await);
   const [[resolve, handle]] = useState(() => {
     const {promise, resolve} = withResolvers();
-    const value = trackedPromise(children.props.resolve);
-    return [
-      promise,
-      () => {
-        valid && resolve(value);
+    const handle = () => {
+      if (valid) {
+        resolve(trackedPromise(cacheChildren.current.props.resolve));
+        cacheChildren.current = null;
       }
-    ];
+    };
+    return [promise, handle];
   });
   const {placeholder, flag} = useView(handle, root, rootIsParent, rootMargin, threshold, onIntersection);
-  if (valid)
-    return flag.current ?
-      children :
-      cloneElement(children, {resolve, placeholder});
+  if (valid) {
+    if (flag.current) {
+      return children;
+    } else {
+      cacheChildren.current = children;
+      return cloneElement(children, {resolve, placeholder});
+    }
+  }
 }
