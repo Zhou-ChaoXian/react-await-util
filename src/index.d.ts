@@ -114,8 +114,7 @@ type DispatchActions<T> = ReturnTypeOrSelf<T> extends Record<string, any> ? {
 export declare function useAwaitReducer<T = any, Rs extends Reducers = Reducers, Deps = any, RsDeps extends Record<string, any> = Record<string, any>, Arg = any, E = any>(options: AwaitReducerOptions<T, Rs, Deps, RsDeps, Arg, E>): [ResolveData<T, E>, Dispatch<ReducersKey<Rs>[keyof ReducersKey<Rs>]>, DispatchActions<Rs>];
 
 export type AwaitReducerProps<T, Rs extends Reducers = Reducers, Deps = any, RsDeps extends Record<string, any> = Record<string, any>, Arg = any, U = any, E = any> =
-  AwaitReducerOptions<T, Rs, Deps, RsDeps, Arg, E>
-  & {
+  AwaitReducerOptions<T, Rs, Deps, RsDeps, Arg, E> & {
   onComputed?: (resolveData: ResolveData<T, E>) => U;
   children: (data: ResolveData<T, E> & { computed: U; dispatch: Dispatch<ReducersKey<Rs>[keyof ReducersKey<Rs>]>, actions: DispatchActions<Rs>; }) => ReactElement;
 };

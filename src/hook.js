@@ -146,10 +146,10 @@ function useAwaitState(
   cacheDeps.current = deps;
   const [resolve, set] = useState(() => jumpFirst ? undefined : handle(deps));
   const setResolve = useCallback((resolve) => {
-    const v = resolve instanceof Promise ?
+    set(resolve instanceof Promise ?
       resolve.then(value => handle(cacheDeps.current, value)) :
-      handle(cacheDeps.current, resolve);
-    set(v);
+      handle(cacheDeps.current, resolve)
+    );
   }, []);
   const resolveData = useAwait({
     resolve,
