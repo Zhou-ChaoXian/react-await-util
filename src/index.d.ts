@@ -122,7 +122,7 @@ export type AwaitReducerProps<T, Rs extends Reducers = Reducers, Deps = any, RsD
 
 export declare function AwaitReducer<T = any, Rs extends Reducers = Reducers, Deps = any, RsDeps extends Record<string, any> = Record<string, any>, Arg = any, U = any, E = any>(props: AwaitReducerProps<T, Rs, Deps, RsDeps, Arg, U, E>): ReactElement;
 
-export interface AwaitWatchOptions<T, Deps, E = any> {
+export interface AwaitWatchOptions<T, Deps = any, E = any> {
   deps?: Deps;
   handle: (deps: Deps) => Promise<T>;
   compare?: ((newDeps: Deps, oldDeps: Deps) => boolean) | false;
@@ -141,7 +141,7 @@ export declare function useAwaitWatchObject<T = any, Deps extends Record<string,
 
 export declare function useAwaitWatchArray<T = any, Deps extends any[] = any[], E = any>(options: AwaitWatchOptions<T, Deps, E>): [ResolveData<T, E>, WatchOptions];
 
-export type AwaitWatchProps<T, Deps, U = any, E = any> = AwaitWatchOptions<T, Deps, E> & {
+export type AwaitWatchProps<T, Deps = any, U = any, E = any> = AwaitWatchOptions<T, Deps, E> & {
   onComputed?: (resolveData: ResolveData<T, E>) => U;
   children: (data: ResolveData<T, E> & { computed: U; watchOptions: WatchOptions; }) => ReactElement;
 };
@@ -219,7 +219,7 @@ export declare function defineAsyncComponent<Props = Record<string, any>, T = an
 
 export declare function useAsyncValue<T = any, A = any, U = any, E = any>(): (ResolveData<T, E> & { action: A; computed: U; watchOptions: WatchOptions; });
 
-export interface ActionProps<A, O> {
+export interface ActionProps<A = any, O = any> {
   useAction: (options?: O) => A;
   options?: O;
   children: (action: A) => ReactElement;
