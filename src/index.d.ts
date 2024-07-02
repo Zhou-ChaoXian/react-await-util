@@ -69,10 +69,10 @@ export declare function useAwaitState<T = any, Deps = any, Arg = any, E = any>(o
 
 export type AwaitStateProps<T, Deps = any, Arg = any, U = any, E = any> = AwaitStateOptions<T, Deps, Arg, E> & {
   onComputed?: (resolveData: ResolveData<T, E>) => U;
-  children: (data: ResolveData<T, E> & { computed: U; setResolve: (resolve?: Promise<Arg> | Arg) => void; }) => ReactElement;
+  children: (data: ResolveData<T, E> & { computed: U; setResolve: (resolve?: Promise<Arg> | Arg) => void; placeholder?: RefObject<any>; }) => ReactElement;
 };
 
-export declare function AwaitState<T = any, Deps = any, Arg = any, U = any, E = any>(props: AwaitStateProps<T, Deps, Arg, U, E>): ReactElement
+export declare function AwaitState<T = any, Deps = any, Arg = any, U = any, E = any>(props: AwaitStateProps<T, Deps, Arg, U, E>): ReactElement<AwaitStateProps<T, Deps, Arg, U, E>, ForwardRefExoticComponent<PropsWithoutRef<AwaitStateProps<T, Deps, Arg, U, E>> & RefAttributes<{ setResolve: (resolve?: Promise<Arg> | Arg) => void; }>>>;
 
 export interface ActionType<T extends string = string, P = any> {
   type: T;
@@ -98,7 +98,7 @@ export interface AwaitReducerOptions<T, Rs extends Reducers = Reducers, Deps = a
 }
 
 export interface Dispatch<T extends string = string, P = any> {
-  (action: ActionType<T, P>): void;
+  (action?: ActionType<T, P>): void;
 }
 
 type ReturnTypeOrSelf<T> = T extends (...args: any[]) => infer R ? R : T;
@@ -108,7 +108,7 @@ type ReducersKey<T> = ReturnTypeOrSelf<T> extends Record<string, any> ? {
 } : never;
 
 type DispatchActions<T> = ReturnTypeOrSelf<T> extends Record<string, any> ? {
-  [K in keyof ReturnTypeOrSelf<T>]: ReturnTypeOrSelf<T>[K] extends Reducer<infer R, infer T1, infer P, infer D> ? (payload?: P) => void : never;
+  [K in keyof ReturnTypeOrSelf<T>]: ReturnTypeOrSelf<T>[K] extends Reducer<infer R, infer T1, infer P, infer D> ? K extends string ? (payload?: P) => ActionType<K, P> : never : never;
 } : never;
 
 export declare function useAwaitReducer<T = any, Rs extends Reducers = Reducers, Deps = any, RsDeps extends Record<string, any> = Record<string, any>, Arg = any, E = any>(options: AwaitReducerOptions<T, Rs, Deps, RsDeps, Arg, E>): [ResolveData<T, E>, Dispatch<ReducersKey<Rs>[keyof ReducersKey<Rs>]>, DispatchActions<Rs>];
@@ -116,10 +116,16 @@ export declare function useAwaitReducer<T = any, Rs extends Reducers = Reducers,
 export type AwaitReducerProps<T, Rs extends Reducers = Reducers, Deps = any, RsDeps extends Record<string, any> = Record<string, any>, Arg = any, U = any, E = any> =
   AwaitReducerOptions<T, Rs, Deps, RsDeps, Arg, E> & {
   onComputed?: (resolveData: ResolveData<T, E>) => U;
-  children: (data: ResolveData<T, E> & { computed: U; dispatch: Dispatch<ReducersKey<Rs>[keyof ReducersKey<Rs>]>, actions: DispatchActions<Rs>; }) => ReactElement;
+  children: (data: ResolveData<T, E> & { computed: U; dispatch: Dispatch<ReducersKey<Rs>[keyof ReducersKey<Rs>]>, actions: DispatchActions<Rs>; placeholder?: RefObject<any>; }) => ReactElement;
 };
 
-export declare function AwaitReducer<T = any, Rs extends Reducers = Reducers, Deps = any, RsDeps extends Record<string, any> = Record<string, any>, Arg = any, U = any, E = any>(props: AwaitReducerProps<T, Rs, Deps, RsDeps, Arg, U, E>): ReactElement;
+export declare function AwaitReducer<T = any, Rs extends Reducers = Reducers, Deps = any, RsDeps extends Record<string, any> = Record<string, any>, Arg = any, U = any, E = any>(props: AwaitReducerProps<T, Rs, Deps, RsDeps, Arg, U, E>): ReactElement<AwaitReducerProps<T, Rs, Deps, RsDeps, Arg, U, E>, ForwardRefExoticComponent<PropsWithoutRef<AwaitReducerProps<T, Rs, Deps, RsDeps, Arg, U, E>> & RefAttributes<{ dispatch: Dispatch<ReducersKey<Rs>[keyof ReducersKey<Rs>]>, actions: DispatchActions<Rs>; }>>>;
+
+export type AwaitStateViewProps =
+  Omit<AwaitViewProps, "children">
+  & { children: ReactElement<AwaitStateProps<any>, typeof AwaitState | typeof AwaitReducer>; };
+
+export declare function AwaitStateView(props: AwaitStateViewProps): ReactElement;
 
 export interface AwaitWatchOptions<T, Deps = any, E = any> {
   deps?: Deps;
@@ -142,20 +148,26 @@ export declare function useAwaitWatchArray<T = any, Deps extends any[] = any[], 
 
 export type AwaitWatchProps<T, Deps = any, U = any, E = any> = AwaitWatchOptions<T, Deps, E> & {
   onComputed?: (resolveData: ResolveData<T, E>) => U;
-  children: (data: ResolveData<T, E> & { computed: U; watchOptions: WatchOptions; }) => ReactElement;
+  children: (data: ResolveData<T, E> & { computed: U; watchOptions: WatchOptions; placeholder?: RefObject<any>; }) => ReactElement;
 };
 
-export declare function AwaitWatch<T = any, Deps = any, U = any, E = any>(props: AwaitWatchProps<T, Deps, U, E>): ReactElement;
+export declare function AwaitWatch<T = any, Deps = any, U = any, E = any>(props: AwaitWatchProps<T, Deps, U, E>): ReactElement<AwaitWatchProps<T, Deps, U, E>, ForwardRefExoticComponent<PropsWithoutRef<AwaitWatchProps<T, Deps, U, E>> & RefAttributes<{ watchOptions: WatchOptions; }>>>;
 
-export declare function AwaitWatchObject<T = any, Deps extends Record<string, any> = Record<string, any>, U = any, E = any>(props: AwaitWatchProps<T, Deps, U, E>): ReactElement;
+export declare function AwaitWatchObject<T = any, Deps extends Record<string, any> = Record<string, any>, U = any, E = any>(props: AwaitWatchProps<T, Deps, U, E>): ReactElement<AwaitWatchProps<T, Deps, U, E>, ForwardRefExoticComponent<PropsWithoutRef<AwaitWatchProps<T, Deps, U, E>> & RefAttributes<{ watchOptions: WatchOptions; }>>>;
 
-export declare function AwaitWatchArray<T = any, Deps extends any[] = any[], U = any, E = any>(props: AwaitWatchProps<T, Deps, U, E>): ReactElement;
+export declare function AwaitWatchArray<T = any, Deps extends any[] = any[], U = any, E = any>(props: AwaitWatchProps<T, Deps, U, E>): ReactElement<AwaitWatchProps<T, Deps, U, E>, ForwardRefExoticComponent<PropsWithoutRef<AwaitWatchProps<T, Deps, U, E>> & RefAttributes<{ watchOptions: WatchOptions; }>>>;
+
+export type AwaitWatchViewProps =
+  Omit<AwaitViewProps, "children">
+  & { children: ReactElement<AwaitWatchProps<any>, typeof AwaitWatch | typeof AwaitWatchObject | typeof AwaitWatchArray> };
+
+export declare function AwaitWatchView(props: AwaitWatchViewProps): ReactElement;
 
 export interface AwaitListProps {
   order?: "forwards" | "backwards" | "together";
   tail?: "collapsed";
   gap?: number;
-  children: ReactElement[];
+  children: ReactElement<AwaitProps<any> | any, typeof Await | any>[];
 }
 
 export declare function AwaitList(props: AwaitListProps): ReactElement;
@@ -185,16 +197,9 @@ export interface AsyncProps<P = Record<string, any>, U = any, E = any> {
   children: (data: ResolveData<ReactElement, E> & { computed: U; watchOptions: WatchOptions; placeholder?: RefObject<any>; }) => ReactElement;
 }
 
-export declare function Async<P = Record<string, any>, U = any, E = any>(props: AsyncProps<P, U, E>): ReactElement;
+export declare function Async<P = Record<string, any>, U = any, E = any>(props: AsyncProps<P, U, E>): ReactElement<AsyncProps<P, U, E>, ForwardRefExoticComponent<PropsWithoutRef<AsyncProps<P, U, E>> & RefAttributes<{ watchOptions: WatchOptions; }>>>;
 
-export interface AsyncViewProps {
-  root?: RefObject<Element | Document | null>;
-  rootIsParent?: boolean;
-  rootMargin?: string;
-  threshold?: number;
-  onIntersection?: (entry: IntersectionObserverEntry) => boolean;
-  children: ReactElement<AsyncProps, typeof Async>;
-}
+export type AsyncViewProps = Omit<AwaitViewProps, "children"> & { children: ReactElement<AsyncProps, typeof Async>; };
 
 export declare function AsyncView(props: AsyncViewProps): ReactElement;
 

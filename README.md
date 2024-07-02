@@ -14,11 +14,13 @@
 8. [`AwaitWatch`](#awaitwatch)
 9. [`AwaitList`](#awaitlist)
 10. [`AwaitView`](#awaitview)
-11. [`Async`](#async)
-12. [`AsyncView`](#asyncview)
-13. [`defineAsyncComponent`](#defineasynccomponent)
-14. [`Action`](#action)
-15. [`Host` `Tmpl` `Slotted`](#插槽组件)
+11. [`AwaitStateView`](#awaitstateview)
+12. [`AwaitWatchView`](#awaitwatchview)
+13. [`Async`](#async)
+14. [`AsyncView`](#asyncview)
+15. [`defineAsyncComponent`](#defineasynccomponent)
+16. [`Action`](#action)
+17. [`Host` `Tmpl` `Slotted`](#插槽组件)
 
 ### useAwait
 
@@ -209,7 +211,7 @@ interface ResolveData {
   value: any;
   error: any;
   computed: any;
-  setResolve: (resolve: any) => void;  // 同上
+  setResolve: (resolve?: any) => void;
 }
 
 type ChildrenFn = (resolveData: ResolveData) => ReactElement;
@@ -268,7 +270,7 @@ function Foo() {
 | onFinal?      |     (first: boolean) => void      | promise 结束时执行 finally          |
 
 ```ts
-type Reducer = (action: { type: string; payload: any; deps: any; }) => any;
+type Reducer = (action?: { type: string; payload: any; deps: any; }) => any;
 type Reducers = Record<string, Reducer> | (() => Record<string, Reducer>);
 ```
 
@@ -300,7 +302,7 @@ function countReducers() {
 
 function Foo() {
   const [count, setCount] = useState(0);
-  // 调用 dispatch 生成新 Promise，actions 是 dispath 快捷操作
+  // 调用 dispatch 生成新 Promise，actions 用于生成 action
   const [{first, status, value}, dispatch, actions] = useAwaitReducer({
     deps: count,
     reducersDeps: {
@@ -319,8 +321,9 @@ function Foo() {
           <h1>{value}</h1>
           <Button.Group>
             <Button onClick={() => setCount(count + 1)} disabled={isPending(status)}>add</Button>
+            <Button onClick={() => dispatch()} disabled={isPending(status)}>update</Button>
             <Button onClick={() => dispatch({type: "test1"})} disabled={isPending(status)}>test1</Button>
-            <Button onClick={() => actions.test2("!!!")} disabled={isPending(status)}>test2</Button>
+            <Button onClick={() => dispatch(actions.test2("!!!"))} disabled={isPending(status)}>test2</Button>
           </Button.Group>
         </Flex>
       </Spin>
@@ -347,7 +350,7 @@ interface ResolveData {
   value: any;
   error: any;
   computed: any;
-  dispatch: (action: { type: string; payload?: any; }) => void;  // 同上
+  dispatch: (action?: { type: string; payload?: any; }) => void;
   actions: Record<string, (payload?: any) => void>;
 }
 
@@ -396,8 +399,9 @@ function Foo() {
             <h1>{value}</h1>
             <Button.Group>
               <Button onClick={() => setCount(count + 1)} disabled={isPending(status)}>add</Button>
+              <Button onClick={() => dispatch()} disabled={isPending(status)}>update</Button>
               <Button onClick={() => dispatch({type: "test1"})} disabled={isPending(status)}>test1</Button>
-              <Button onClick={() => actions.test2("!!!")} disabled={isPending(status)}>test2</Button>
+              <Button onClick={() => dispatch(actions.test2("!!!"))} disabled={isPending(status)}>test2</Button>
             </Button.Group>
           </Flex>
         </Spin>
@@ -634,6 +638,131 @@ function Foo() {
       </AwaitView>
     </>
   );
+}
+```
+
+### AwaitStateView
+
+> 同 `AwaitView` 组件
+
+> ***注意：*** `AwaitStateView` 子元素必须是 `AwaitState` 或 `AwaitReducer`，并且 `jumpFirst` 不能为 `true`
+
+***示例***
+
+```jsx
+import {useState} from "react";
+import {isPending, Action, AwaitState, AwaitStateView} from "react-await-util";
+import {Skeleton, Button, Flex, Spin} from "antd";
+
+function Foo() {
+  return (
+    <>
+      <div style={{height: "120vh"}}></div>
+      <Action useAction={useCountAction}>{({count, add, handle}) =>
+        <AwaitStateView threshold={1}>
+          <AwaitState deps={count} handle={handle}>{({first, status, value, setResolve, placeholder}) =>
+            <div ref={placeholder} style={{height: 300}}>
+              <Skeleton loading={first}>
+                <Spin spinning={isPending(status)}>
+                  <Flex vertical justify="center" align="center" gap="middle">
+                    <h1>{count} - {value}</h1>
+                    <Button onClick={add}>add</Button>
+                    <Button.Group>
+                      <Button onClick={() => setResolve("update1")}>update1</Button>
+                      <Button onClick={setResolve}>event</Button>
+                    </Button.Group>
+                  </Flex>
+                </Spin>
+              </Skeleton>
+            </div>
+          }</AwaitState>
+        </AwaitStateView>
+      }</Action>
+    </>
+  );
+}
+
+function useCountAction() {
+  const [count, setCount] = useState(0);
+
+  function add() {
+    setCount(count + 1);
+  }
+
+  async function handle(count, arg) {
+    console.log("handle", count, arg);
+    await new Promise(resolve => setTimeout(resolve, 1000));
+    return "hello" + count;
+  }
+
+  return {
+    count,
+    add,
+    handle,
+  };
+}
+```
+
+### AwaitWatchView
+
+> 同 `AwaitView` 组件
+
+> ***注意：*** `AwaitWatchView` 子元素必须是 `AwaitWatch` 或 `AwaitWatchObject` 或 `AwaitWatchArray`，并且 `jumpFirst`
+> 不能为 `true`
+
+***示例***
+
+```jsx
+import {useState} from "react";
+import {isPending, Action, AwaitWatchView, AwaitWatch} from "react-await-util";
+import {Skeleton, Button, Flex, Spin} from "antd";
+
+function Foo() {
+  return (
+    <>
+      <div style={{height: "120vh"}}></div>
+      <Action useAction={useCountAction}>{({count, add, handle}) =>
+        <AwaitWatchView threshold={1}>
+          <AwaitWatch deps={count} handle={handle}>{({first, status, value, watchOptions, placeholder}) =>
+            <div ref={placeholder} style={{height: 300}}>
+              <Skeleton loading={first}>
+                <Spin spinning={isPending(status)}>
+                  <Flex vertical justify="center" align="center" gap="middle">
+                    <h1>{count} - {value}</h1>
+                    <Button onClick={add}>add</Button>
+                    <Button.Group>
+                      <Button onClick={watchOptions.update}>update</Button>
+                      <Button onClick={watchOptions.unWatch} disabled={!watchOptions.isWatching}>unWatch</Button>
+                      <Button onClick={watchOptions.reWatch} disabled={watchOptions.isWatching}>reWatch</Button>
+                    </Button.Group>
+                  </Flex>
+                </Spin>
+              </Skeleton>
+            </div>
+          }</AwaitWatch>
+        </AwaitWatchView>
+      }</Action>
+    </>
+  );
+}
+
+function useCountAction() {
+  const [count, setCount] = useState(0);
+
+  function add() {
+    setCount(count + 1);
+  }
+
+  async function handle(count) {
+    await new Promise(resolve => setTimeout(resolve, 1000));
+    return "hello" + count;
+  }
+
+  return {
+    count,
+    add,
+    handle,
+  };
 }
 ```
 

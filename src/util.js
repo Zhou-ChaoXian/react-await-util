@@ -1,5 +1,7 @@
 "use strict";
 
+import {isValidElement} from "react";
+
 export {
   _data,
   _error,
@@ -11,6 +13,7 @@ export {
   defaultCompareArray,
   defaultIntersection,
   withResolvers,
+  viewElementValidate,
 };
 
 const _data = Symbol(), _error = Symbol(), _tracked = Symbol();
@@ -54,4 +57,8 @@ function withResolvers() {
     reject = _reject;
   });
   return {promise, resolve, reject};
+}
+
+function viewElementValidate(element, typeValidate) {
+  return isValidElement(element) && typeValidate() && !element.props.jumpFirst;
 }

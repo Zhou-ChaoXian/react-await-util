@@ -1,6 +1,6 @@
 "use strict";
 
-import {useState, useCallback, useRef, useEffect} from "react";
+import {useState, useCallback, useRef, useEffect, createContext, useContext} from "react";
 import {
   _data,
   _error,
@@ -24,6 +24,9 @@ export {
   useForceUpdate,
   useWatchOptions,
   useView,
+  StateGenerateResolveContext,
+  defaultWatchGenerateResolve,
+  WatchGenerateResolveContext,
 };
 
 const pendingStatus = Symbol("pending");
@@ -129,6 +132,12 @@ function useAwait(
   return resolveData.current;
 }
 
+function defaultStateGenerateResolve(resolve) {
+  return resolve;
+}
+
+const StateGenerateResolveContext = createContext(defaultStateGenerateResolve);
+
 function useAwaitState(
   {
     deps,
@@ -144,12 +153,13 @@ function useAwaitState(
 ) {
   const cacheDeps = useRef(undefined);
   cacheDeps.current = deps;
-  const [resolve, set] = useState(() => jumpFirst ? undefined : handle(deps));
+  const stateGenerateResolve = useContext(StateGenerateResolveContext);
+  const [resolve, set] = useState(() => jumpFirst ? undefined : stateGenerateResolve(handle(deps)));
   const setResolve = useCallback((resolve) => {
-    set(resolve instanceof Promise ?
+    set(stateGenerateResolve(resolve instanceof Promise ?
       resolve.then(value => handle(cacheDeps.current, value)) :
       handle(cacheDeps.current, resolve)
-    );
+    ));
   }, []);
   const resolveData = useAwait({
     resolve,
@@ -195,23 +205,33 @@ function useAwaitReducer(
   const [reducers] = useState(() =>
     typeof reducersOrFunction === "function" ?
       reducersOrFunction() :
-      reducersOrFunction
+      (reducersOrFunction ?? {})
   );
   const dispatch = useCallback((action) => {
-    const {type, payload} = action;
-    const reducer = reducers[type];
-    if (typeof reducer === "function") {
-      setResolve(reducer({type, payload, deps: cacheReducersDeps.current?.[type]}));
+    if (action) {
+      const {type, payload} = action;
+      const reducer = reducers[type];
+      if (typeof reducer === "function") {
+        setResolve(reducer({type, payload, deps: cacheReducersDeps.current?.[type]}));
+      }
+    } else {
+      setResolve();
     }
   }, []);
   const [actions] = useState(() => {
     return Object.keys(reducers).reduce((obj, type) => {
-      obj[type] = (payload) => dispatch({type, payload});
+      obj[type] = (payload) => ({type, payload});
       return obj;
     }, {})
   });
   return [resolveData, dispatch, actions];
 }
+
+function defaultWatchGenerateResolve(handle, deps) {
+  return handle(deps);
+}
+
+const WatchGenerateResolveContext = createContext(defaultWatchGenerateResolve);
 
 function useAwaitWatch(
   {
@@ -231,14 +251,15 @@ function useAwaitWatch(
   const cacheDeps = useRef(null);
   const first = useRef(true);
   const [watchOptions, isUpdate, isWatching] = useWatchOptions();
+  const watchGenerateResolve = useContext(WatchGenerateResolveContext);
   if (first.current) {
     first.current = false;
     if (!jumpFirst)
-      cacheResolve.current = handle(deps);
+      cacheResolve.current = watchGenerateResolve(handle, deps);
   } else {
     if (isWatching.current && (isUpdate.current || (compare && compare(deps, cacheDeps.current)))) {
       isUpdate.current = false;
-      cacheResolve.current = handle(deps);
+      cacheResolve.current = watchGenerateResolve(handle, deps);
     }
   }
   cacheDeps.current = deps;

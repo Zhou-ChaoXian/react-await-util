@@ -5,7 +5,6 @@ import {
   createElement,
   forwardRef,
   Fragment,
-  isValidElement,
   useImperativeHandle,
   useMemo,
   useRef,
@@ -18,6 +17,9 @@ import {
   useAwaitWatch,
   useForceUpdate,
   useView,
+  StateGenerateResolveContext,
+  defaultWatchGenerateResolve,
+  WatchGenerateResolveContext,
 } from "./hook.js";
 import {
   _tracked,
@@ -27,6 +29,7 @@ import {
   defaultCompareArray,
   defaultIntersection,
   withResolvers,
+  viewElementValidate,
 } from "./util.js";
 
 export {
@@ -38,6 +41,8 @@ export {
   AwaitWatchArray,
   AwaitList,
   AwaitView,
+  AwaitStateView,
+  AwaitWatchView,
 };
 
 function Await(
@@ -83,6 +88,7 @@ const AwaitState = forwardRef(function AwaitState(
     onError,
     onFinal,
     onComputed,
+    placeholder,
     children,
   },
   ref
@@ -99,8 +105,8 @@ const AwaitState = forwardRef(function AwaitState(
     onFinal,
   });
   const computed = useMemo(() => onComputed?.(resolveData), [resolveData]);
-  useImperativeHandle(ref, () => setResolve, []);
-  return children({...resolveData, computed, setResolve});
+  useImperativeHandle(ref, () => ({setResolve}), []);
+  return children({...resolveData, computed, setResolve, placeholder});
 });
 
 const AwaitReducer = forwardRef(function AwaitReducer(
@@ -117,6 +123,7 @@ const AwaitReducer = forwardRef(function AwaitReducer(
     onError,
     onFinal,
     onComputed,
+    placeholder,
     children,
   },
   ref
@@ -135,9 +142,44 @@ const AwaitReducer = forwardRef(function AwaitReducer(
     onFinal,
   });
   const computed = useMemo(() => onComputed?.(resolveData), [resolveData]);
-  useImperativeHandle(ref, () => dispatch, []);
-  return children({...resolveData, computed, dispatch, actions});
+  useImperativeHandle(ref, () => ({dispatch, actions}), []);
+  return children({...resolveData, computed, dispatch, actions, placeholder});
 });
+
+const awaitStateSet = new Set([AwaitState, AwaitReducer]);
+
+function AwaitStateView(
+  {
+    root,
+    rootIsParent,
+    rootMargin,
+    threshold,
+    children,
+    onIntersection = defaultIntersection,
+  }
+) {
+  const [valid] = useState(() => viewElementValidate(children, () => awaitStateSet.has(children.type)));
+  const [[stateGenerateResolve, handle]] = useState(() => {
+    const {promise, resolve} = withResolvers();
+    let realResolve;
+    return [
+      (resolve) => {
+        realResolve = resolve;
+        return flag.current ? realResolve : promise;
+      },
+      () => {
+        if (valid) {
+          resolve(trackedPromise(realResolve));
+        }
+      }
+    ];
+  });
+  const {placeholder, flag} = useView(handle, root, rootIsParent, rootMargin, threshold, onIntersection);
+  if (valid) {
+    const el = flag.current ? children : cloneElement(children, {placeholder});
+    return createElement(StateGenerateResolveContext.Provider, {value: stateGenerateResolve}, el);
+  }
+}
 
 const AwaitWatch = forwardRef(function AwaitWatch(
   {
@@ -152,6 +194,7 @@ const AwaitWatch = forwardRef(function AwaitWatch(
     onError,
     onFinal,
     onComputed,
+    placeholder,
     children,
   },
   ref
@@ -170,7 +213,7 @@ const AwaitWatch = forwardRef(function AwaitWatch(
   });
   const computed = useMemo(() => onComputed?.(resolveData), [resolveData]);
   useImperativeHandle(ref, () => watchOptions, []);
-  return children({...resolveData, computed, watchOptions});
+  return children({...resolveData, computed, watchOptions, placeholder});
 });
 
 const AwaitWatchObject = forwardRef(function AwaitWatchObject(
@@ -186,6 +229,7 @@ const AwaitWatchObject = forwardRef(function AwaitWatchObject(
     onError,
     onFinal,
     onComputed,
+    placeholder,
     children,
   },
   ref
@@ -204,7 +248,7 @@ const AwaitWatchObject = forwardRef(function AwaitWatchObject(
   });
   const computed = useMemo(() => onComputed?.(resolveData), [resolveData]);
   useImperativeHandle(ref, () => watchOptions, []);
-  return children({...resolveData, computed, watchOptions});
+  return children({...resolveData, computed, watchOptions, placeholder});
 });
 
 const AwaitWatchArray = forwardRef(function AwaitWatchArray(
@@ -220,6 +264,7 @@ const AwaitWatchArray = forwardRef(function AwaitWatchArray(
     onError,
     onFinal,
     onComputed,
+    placeholder,
     children,
   },
   ref
@@ -238,8 +283,43 @@ const AwaitWatchArray = forwardRef(function AwaitWatchArray(
   });
   const computed = useMemo(() => onComputed?.(resolveData), [resolveData]);
   useImperativeHandle(ref, () => watchOptions, []);
-  return children({...resolveData, computed, watchOptions});
+  return children({...resolveData, computed, watchOptions, placeholder});
 });
+
+const awaitWatchSet = new Set([AwaitWatch, AwaitWatchObject, AwaitWatchArray]);
+
+function AwaitWatchView(
+  {
+    root,
+    rootIsParent,
+    rootMargin,
+    threshold,
+    children,
+    onIntersection = defaultIntersection,
+  }
+) {
+  const [valid] = useState(() => viewElementValidate(children, () => awaitWatchSet.has(children.type)));
+  const [[watchGenerateResolve, handle]] = useState(() => {
+    const {promise, resolve} = withResolvers();
+    let realResolve;
+    return [
+      (handle, deps) => {
+        realResolve = defaultWatchGenerateResolve(handle, deps);
+        return flag.current ? realResolve : promise;
+      },
+      () => {
+        if (valid) {
+          resolve(trackedPromise(realResolve));
+        }
+      }
+    ];
+  });
+  const {placeholder, flag} = useView(handle, root, rootIsParent, rootMargin, threshold, onIntersection);
+  if (valid) {
+    const el = flag.current ? children : cloneElement(children, {placeholder});
+    return createElement(WatchGenerateResolveContext.Provider, {value: watchGenerateResolve}, el);
+  }
+}
 
 const orders = new Set(["forwards", "backwards", "together"]);
 const nop = Symbol(), noRender = Symbol();
@@ -324,7 +404,7 @@ function AwaitView(
   }
 ) {
   const cacheChildren = useRef(null);
-  const [valid] = useState(() => isValidElement(children) && children.type === Await);
+  const [valid] = useState(() => viewElementValidate(children, () => children.type === Await));
   const [[resolve, handle]] = useState(() => {
     const {promise, resolve} = withResolvers();
     const handle = () => {

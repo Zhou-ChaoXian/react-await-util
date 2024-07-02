@@ -5,7 +5,6 @@ import {
   createContext,
   createElement,
   forwardRef,
-  isValidElement,
   useContext,
   useImperativeHandle,
   useMemo,
@@ -13,7 +12,13 @@ import {
   useState,
 } from "react";
 import {useAwait, useWatchOptions, useView} from "./hook.js";
-import {trackedPromise, defaultCompareObject, defaultIntersection, withResolvers} from "./util.js";
+import {
+  trackedPromise,
+  defaultCompareObject,
+  defaultIntersection,
+  withResolvers,
+  viewElementValidate,
+} from "./util.js";
 
 export {
   Async,
@@ -93,7 +98,7 @@ function AsyncView(
     onIntersection = defaultIntersection,
   }
 ) {
-  const [valid] = useState(() => isValidElement(children) && children.type === Async);
+  const [valid] = useState(() => viewElementValidate(children, () => children.type === Async));
   const [[generateResolve, handle]] = useState(() => {
     const {promise, resolve} = withResolvers();
     let realResolve;
