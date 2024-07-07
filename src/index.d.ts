@@ -4,6 +4,7 @@ import type {
   ForwardRefExoticComponent,
   PropsWithoutRef,
   RefAttributes,
+  ReactNode,
 } from "react";
 
 declare const pendingStatus: unique symbol;
@@ -231,24 +232,69 @@ export interface ActionProps<A = any, O = any> {
 
 export declare function Action<A = any, O = any>(props: ActionProps<A, O>): ReactElement;
 
+export interface IfProps {
+  condition: boolean | (() => boolean);
+  not?: boolean;
+  children: ReactNode;
+  fallback?: ReactNode;
+}
+
+export declare function If(props: IfProps): ReactElement;
+
+export interface ShowProps {
+  condition: boolean | (() => boolean);
+  not?: boolean;
+  children: ReactNode;
+}
+
+export declare function Show(props: ShowProps): ReactElement;
+
+type KeyType<T extends Record<any, any> | Array<any>, K extends string | number | Array<any>> =
+  K extends string | number ?
+    T[K] :
+    K extends [infer First] ?
+      T[First] :
+      K extends [infer First, ...infer Others] ?
+        KeyType<T[First], Others> :
+        never;
+
+export interface ForProps<T extends Record<any, any> | Array<any>, K extends string | number | Array<string | number> = any> {
+  items: T[];
+  keyPath?: K;
+  children: (data: { item: T; index: number; key: KeyType<T, K>; }) => ReactElement;
+}
+
+export declare function For<T extends Record<any, any> | Array<any> = any, K extends string | number | Array<string | number> = any>(props: ForProps<T, K>): ReactElement;
+
 export interface HostProps {
   children: ReactElement | ReactElement[];
 }
 
 export declare function Host(props: HostProps): ReactElement;
 
-export interface TmplProps<P> {
+export interface TmplProps<P extends Omit<Record<string, any>, "name" | "children">> {
   name?: string;
   children: ReactElement | ReactElement[] | ((props: P) => ReactElement);
 }
 
-export declare function Tmpl<P = Omit<Record<string, any>, "name" | "children">>(props: TmplProps<P>): ReactElement;
+export declare function Tmpl<P extends Omit<Record<string, any>, "name" | "children"> = any>(props: TmplProps<P>): ReactElement;
 
-export interface SlottedProps {
-  name?: string;
-  children?: ReactElement | ReactElement[];
-
-  [key: string]: any;
-}
+export type SlottedProps = Omit<Record<string, any>, "name" | "children">;
 
 export declare function Slotted(props: SlottedProps): ReactElement;
+
+export interface GenProps {
+  children: ReactElement | ReactElement[];
+}
+
+export declare function Gen(props: GenProps): ReactElement;
+
+export interface YieldProps<P extends Omit<Record<string, any>, "children">> {
+  children: ReactElement | ReactElement[] | ((props: P) => ReactElement);
+}
+
+export declare function Yield<P extends Omit<Record<string, any>, "children"> = any>(props: YieldProps<P>): ReactElement;
+
+export type NextProps = Omit<Record<string, any>, "children">;
+
+export declare function Next(props: NextProps): ReactElement;

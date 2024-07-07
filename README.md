@@ -27,6 +27,10 @@ npm install react-await-util
 15. [`defineAsyncComponent`](#defineasynccomponent)
 16. [`Action`](#action)
 17. [`Host` `Tmpl` `Slotted`](#插槽组件)
+18. [`If`](#if)
+19. [`Show`](#show)
+20. [`For`](#for)
+21. [`Gen` `Yield` `Next`](#链式组件)
 
 ### useAwait
 
@@ -1114,6 +1118,126 @@ function Foo() {
         <h1>1</h1>
       </Tmpl>
     </Host>
+  );
+}
+```
+
+### If
+
+> 类似于 `vue` 的 ***v-if*** 指令，较高的切换性能  
+> 验证条件为 `true` ，显示 `children`，否则显示 `fallback`
+
+***? 表示可选属性***
+
+| `props`   |            `type`            | `description` |
+|:----------|:----------------------------:|:--------------|
+| condition | boolean &#124; () => boolean | 条件            |
+| not?      |           boolean            | 对条件取反         |
+| children  |          ReactNode           | 条件为 true 显示   |
+| fallback? |          ReactNode           | 条件为 false 显示  |
+
+```jsx
+import {If} from "react-await-util";
+
+function Foo() {
+  return (
+    <If condition={true}>
+      <h1>hello</h1>
+    </If>
+  );
+}
+```
+
+### Show
+
+> 类似于 `vue` 的 ***v-show*** 指令，较高的初始性能  
+> 验证条件为 `true`，显示 `children`，否则隐藏 `children`，不销毁子元素
+
+***? 表示可选属性***
+
+| `props`   |            `type`            | `description`        |
+|:----------|:----------------------------:|:---------------------|
+| condition | boolean &#124; () => boolean | 条件                   |
+| not?      |           boolean            | 对条件取反                |
+| children  |          ReactNode           | 条件为 true 显示，false 隐藏 |
+
+```jsx
+import {useState} from "react";
+import {Show} from "react-await-util";
+
+function Foo() {
+  const [show, setShow] = useState(false);
+  return (
+    <>
+      <button onClick={() => setShow(!show)}>toggle</button>
+      <Show condition={show}>
+        <h1>hello</h1>
+        <h1>hi</h1>
+        <Bar/>
+      </Show>
+    </>
+  );
+}
+
+function Bar() {
+  return (
+    <h1>你好</h1>
+  );
+}
+```
+
+### For
+
+***? 表示可选属性***
+
+| `props`  |                             `type`                              | `description` |
+|:---------|:---------------------------------------------------------------:|:--------------|
+| items    |                              any[]                              | 数据            |
+| keyPath? |     string &#124; number &#124; Array<string &#124; number>     | key 的路径       |
+| children | (data: { item: any; index: number; key: any; }) => ReactElement | 子元素           |
+
+```tsx
+import {For} from "react-await-util";
+
+function Foo() {
+  const data = [
+    {id: [1], name: "james"},
+    {id: [2], name: "durant"},
+  ];
+  return (
+    <For items={data} keyPath={["id", 0] as ["id", 0]}>{({item, key}) =>
+      <h1 key={key}>{item.name}</h1>
+    }</For>
+  );
+}
+```
+
+### 链式组件
+
+> 组件嵌套层级太深，将其变成类似于 `Promise` 链式调用  
+> `Gen` 生成器  
+> `Yield` 下一步要渲染的元素  
+> `Next` 渲染下一步元素  
+> ***`Gen` 只渲染第一个子元素，第一个元素不能是 `Yield`，其他元素都是 `Next` 组件***
+
+```jsx
+function Foo() {
+  return (
+    <Gen>
+      <>
+        <h1>hello world</h1>
+        <Next/>
+      </>
+      <Yield>
+        <div style={{border: "1px solid", padding: 10}}>
+          <h1>hello</h1>
+          <Next message="你好"/>
+        </div>
+      </Yield>
+      <Yield>{({message}) =>
+        <h1>{message}</h1>
+      }</Yield>
+    </Gen>
   );
 }
 ```
