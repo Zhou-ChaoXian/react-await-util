@@ -1,6 +1,6 @@
 {
   "name": "react-await-util",
-  "version": "1.0.2",
+  "version": "1.0.3",
   "description": "Processing asynchronous data in react functional components.",
   "main": "./dist/index.js",
   "module": "./dist/es/index.mjs",
