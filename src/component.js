@@ -32,19 +32,23 @@ function Show({condition, not = false, children}) {
 
 function Wrap({valid, children}) {
   const promise = useRef(null);
-  const [first, setFirst] = useState(true);
+  const [first, setFirst] = useState(() => ({current: true}));
   useLayoutEffect(() => {
-    if (first && valid) {
-      setFirst(false);
+    if (valid) {
+      setFirst({current: false});
+    } else {
+      first.current = false;
     }
   }, []);
-  if (!first && valid) {
-    if (promise.current === null) {
-      promise.current = generatePromise();
+  if (!first.current) {
+    if (valid) {
+      if (promise.current === null) {
+        promise.current = generatePromise();
+      }
+      throw promise.current;
+    } else {
+      promise.current = null;
     }
-    throw promise.current;
-  } else {
-    promise.current = null;
   }
   return children;
 }
