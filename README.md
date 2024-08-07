@@ -1010,7 +1010,8 @@ const Bar = defineAsyncComponent({
 
 ### Action
 
-> 将状态和操作封装，仅供子元素使用
+> 将状态和操作封装，仅供子元素使用  
+> 合理的嵌套 `Action`，写出更加 `hooks` 思想的代码
 
 ***示例***
 
@@ -1124,7 +1125,7 @@ function Foo() {
 
 ### If
 
-> 类似于 `vue` 的 ***v-if*** 指令，较高的切换性能  
+> 类似于 `vue` 的 ***v-if*** 指令，较高的初始性能  
 > 验证条件为 `true` ，显示 `children`，否则显示 `fallback`
 
 ***? 表示可选属性***
@@ -1150,7 +1151,7 @@ function Foo() {
 
 ### Show
 
-> 类似于 `vue` 的 ***v-show*** 指令，较高的初始性能  
+> 类似于 `vue` 的 ***v-show*** 指令，较高的切换性能  
 > 验证条件为 `true`，显示 `children`，否则隐藏 `children`，不销毁子元素
 
 ***? 表示可选属性***
