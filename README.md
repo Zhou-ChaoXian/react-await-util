@@ -1193,21 +1193,27 @@ function Bar() {
 
 | `props`  |                             `type`                              | `description` |
 |:---------|:---------------------------------------------------------------:|:--------------|
-| items    |                              any[]                              | 数据            |
+| items    |                          Iterable<any>                          | 数据            |
 | keyPath? |     string &#124; number &#124; Array<string &#124; number>     | key 的路径       |
 | children | (data: { item: any; index: number; key: any; }) => ReactElement | 子元素           |
 
 ```tsx
 import {For} from "react-await-util";
 
+interface IData {
+  id: [number];
+  name: string;
+}
+
 function Foo() {
-  const data = [
+  const data: IData[] = [
     {id: [1], name: "james"},
     {id: [2], name: "durant"},
+    {id: [3], name: "harden"},
   ];
   return (
-    <For items={data} keyPath={["id", 0] as ["id", 0]}>{({item, key}) =>
-      <h1 key={key}>{item.name}</h1>
+    <For<IData, ["id", 0]> items={data} keyPath={["id", 0]}>{({item, key, index}) =>
+      <h1 key={key}>{index} - {item.name}</h1>
     }</For>
   );
 }

@@ -59,11 +59,17 @@ function generatePromise() {
 
 function For({items, keyPath, children}) {
   keyPath = [keyPath].flat();
-  return items.map((item, index) => children({
-    item,
-    index,
-    key: keyPath.reduce((item, key) => item[key], item),
-  }));
+  const elements = [];
+  let index = 0;
+  for (const item of items) {
+    elements.push(children({
+      item,
+      index,
+      key: keyPath.reduce((item, key) => item[key], item),
+    }));
+    index += 1;
+  }
+  return elements;
 }
 
 const HostContext = createContext(undefined);

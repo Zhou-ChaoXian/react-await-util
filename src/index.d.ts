@@ -259,7 +259,7 @@ type KeyType<T extends Record<any, any> | Array<any>, K extends string | number 
         never;
 
 export interface ForProps<T extends Record<any, any> | Array<any>, K extends string | number | Array<string | number> = any> {
-  items: T[];
+  items: Iterable<T>;
   keyPath?: K;
   children: (data: { item: T; index: number; key: KeyType<T, K>; }) => ReactElement;
 }
